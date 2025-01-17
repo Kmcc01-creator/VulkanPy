@@ -212,4 +212,3 @@ class ResourceManager:
 
         self.copy_buffer(staging_buffer.buffer, index_buffer.buffer, buffer_size)
         return index_buffer, staging_buffer.memory, len(indices)
-        vk.vkDestroyShaderModule(self.device, module, None)
