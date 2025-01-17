@@ -44,45 +44,6 @@ class VulkanRenderer:
     def cleanup(self):
         self.vulkan_engine.cleanup()
 
-        vk.vkResetFences(self.device, 1, [self.in_flight_fences[self.current_frame]])
-
-        vk.vkResetCommandBuffer(self.command_buffers[self.current_frame], 0)
-        self.record_command_buffer(self.command_buffers[self.current_frame], image_index)
-
-        submit_info = vk.VkSubmitInfo(
-            sType=vk.VK_STRUCTURE_TYPE_SUBMIT_INFO,
-            waitSemaphoreCount=1,
-            pWaitSemaphores=[self.image_available_semaphores[self.current_frame]],
-            pWaitDstStageMask=[vk.VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT],
-            commandBufferCount=1,
-            pCommandBuffers=[self.command_buffers[self.current_frame]],
-            signalSemaphoreCount=1,
-            pSignalSemaphores=[self.render_finished_semaphores[self.current_frame]],
-        )
-
-        try:
-            vk.vkQueueSubmit(self.graphics_queue, 1, [submit_info], self.in_flight_fences[self.current_frame])
-        except vk.VkErrorOutOfDateKHR:
-            self.recreate_swapchain()
-            return
-
-        present_info = vk.VkPresentInfoKHR(
-            sType=vk.VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-            waitSemaphoreCount=1,
-            pWaitSemaphores=[self.render_finished_semaphores[self.current_frame]],
-            swapchainCount=1,
-            pSwapchains=[self.swapchain],
-            pImageIndices=[image_index],
-        )
-
-        try:
-            vk.vkQueuePresentKHR(self.present_queue, present_info)
-        except vk.VkErrorOutOfDateKHR:
-            self.recreate_swapchain()
-            return
-
-        self.current_frame = (self.current_frame + 1) % len(self.framebuffers)
-
     def record_command_buffer(self, command_buffer, image_index):
         begin_info = vk.VkCommandBufferBeginInfo(
             sType=vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
