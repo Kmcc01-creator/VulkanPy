@@ -40,9 +40,13 @@ class ResourceManager:
         )
         layout = vk.vkCreateDescriptorSetLayout(self.device, layout_info, None)
         self.add_resource(layout, "descriptor_set_layout")
-        layout_key = tuple(b.binding for b in bindings) # Use bindings as key
-        self.descriptor_set_layouts[layout_key] = layout # Store layout in dictionary
         return layout # Return DescriptorSetLayout object
+
+    def create_device(self, instance, enabled_layers): # New method to create device
+        from vulkan_engine.device import create_device as create_vk_device
+        device, physical_device, graphics_queue_family_index = create_vk_device(instance, enabled_layers)
+        self.add_resource(device, "device")
+        return device, physical_device, graphics_queue_family_index
 
 
     def create_swapchain(self, create_info):

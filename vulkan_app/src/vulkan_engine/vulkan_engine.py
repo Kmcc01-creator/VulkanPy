@@ -31,7 +31,7 @@ class VulkanEngine:
         try:
             self.resource_manager = ResourceManager(self) # Initialize ResourceManager first
             self.instance, self.enabled_layers = self.resource_manager.create_instance() # Create instance through ResourceManager
-            self.device, self.physical_device, self.graphics_queue_family_index = self.create_device() # Device creation remains here for now
+            self.device, self.physical_device, self.graphics_queue_family_index = self.resource_manager.create_device(self.instance, self.enabled_layers) # Create device through ResourceManager
             self.surface = self.create_surface() # Surface creation remains here for now
             self.setup_queues()
             self.swapchain = Swapchain(self, self.resource_manager)
@@ -54,9 +54,6 @@ class VulkanEngine:
             raise
 
     def create_device(self): # No changes here yet
-        from vulkan_engine.device import create_device as create_vk_device
-        return create_vk_device(self.instance, self.enabled_layers)
-
     def setup_queues(self):
         self.graphics_queue = vk.vkGetDeviceQueue(self.device, self.graphics_queue_family_index, 0)
         self.present_queue_family_index = self.find_present_queue_family()
