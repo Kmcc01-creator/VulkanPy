@@ -5,6 +5,7 @@ class Vertex:
         self.pos = pos
         self.color = color
 
+    @staticmethod
     def get_binding_descriptions():
         bindings = []
         # Position and color binding description
@@ -17,6 +18,7 @@ class Vertex:
         )
         return bindings
 
+    @staticmethod
     def get_attribute_descriptions():
         attributes = []
         # Position attribute description
