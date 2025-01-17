@@ -43,5 +43,5 @@ The `RenderManager` class will be responsible for:
 The `VulkanRenderer` class will:
 
 * Initialize the `VulkanEngine` and `RenderManager`.
-* Handle window resizing by triggering the `VulkanEngine` to recreate the swapchain.
+* Handle window resizing by calling the `Swapchain` object's `recreate_swapchain` method, which now includes framebuffer recreation.
 * Delegate rendering tasks to the `RenderManager`.

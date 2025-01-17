@@ -42,16 +42,11 @@ class VulkanRenderer:
         self.pipeline = self.swapchain.pipeline # Access pipeline from Swapchain object
         self.pipeline_layout = self.swapchain.pipeline_layout # Access pipeline_layout from Swapchain object
         self.framebuffers = self.swapchain.framebuffers # Access framebuffers from Swapchain object
-        self.create_command_pool() # New: create command pool
-
         self.current_frame = 0
         self.graphics_queue = vk.vkGetDeviceQueue(self.device, self.graphics_queue_family_index, 0)
         self.present_queue = vk.vkGetDeviceQueue(self.device, self.graphics_queue_family_index, 0) # Using graphics queue for present for now
 
         glfw.set_framebuffer_size_callback(self.window, self.framebuffer_resize_callback)
-
-    def framebuffer_resize_callback(self, window, width, height):
-        self.recreate_swapchain()
 
     def create_instance(self):
         from vulkan_engine.instance import create_instance as create_vk_instance
@@ -60,26 +55,6 @@ class VulkanRenderer:
     def create_device(self):
         from vulkan_engine.device import create_device as create_vk_device
         return create_vk_device(self.instance, self.enabled_layers)
-
-        from vulkan_engine.synchronization import create_sync_objects as create_vk_sync_objects
-        self.image_available_semaphores, self.render_finished_semaphores, self.in_flight_fences = create_vk_sync_objects(self.device, len(self.swapchain.swapchain_images), self.resource_manager)
-
-    def recreate_swapchain(self):
-        vk.vkDeviceWaitIdle(self.device) # Wait for device to be idle
-
-        width = int(glfw.get_framebuffer_size(self.window)[0]) # Define width
-        height = int(glfw.get_framebuffer_size(self.window)[1])
-        while width == 0 or height == 0: # Handle window minimization
-            width = int(glfw.get_framebuffer_size(self.window)[0])
-            height = int(glfw.get_framebuffer_size(self.window)[1])
-            glfw.wait_events()
-
-        vk.vkDeviceWaitIdle(self.device)
-
-        self.swapchain.recreate_swapchain()
-
-        # Recreate command buffers
-        self.create_command_buffers()
 
 
     def render(self):

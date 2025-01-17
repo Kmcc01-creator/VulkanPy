@@ -44,8 +44,22 @@ class VulkanEngine:
     def recreate_swapchain(self):
         self.swapchain.recreate_swapchain()
         self.render_manager.create_command_buffers(self.swapchain.framebuffers)
+    def create_descriptor_set_layout(self):
+        from vulkan_engine.descriptors import DescriptorSetLayout
+        bindings = []
+        bindings.append(
+            vk.VkDescriptorSetLayoutBinding(
+                binding=0,
+                descriptorType=vk.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                descriptorCount=1,
+                stageFlags=vk.VK_SHADER_STAGE_VERTEX_BIT,
+            )
+        )
+        self.descriptor_set_layout = DescriptorSetLayout(self.device, bindings)
+        self.resource_manager.add_resource(self.descriptor_set_layout.layout, "descriptor_set_layout", self.resource_manager.destroy_descriptor_set_layout)
 
     def cleanup(self):
         self.resource_manager.cleanup()
+
 
 
