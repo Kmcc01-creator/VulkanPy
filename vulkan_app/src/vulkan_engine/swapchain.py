@@ -171,12 +171,26 @@ def choose_surface_format(physical_device, surface):
     # For simplicity, select the first available format.
     # In a real application, you might want to add format selection logic here.
     return formats[0]
-        desired_count = surface_capabilities.minImageCount + 1
-        if surface_capabilities.maxImageCount > 0:
-            return min(desired_count, surface_capabilities.maxImageCount)
-        return desired_count
 
-    def choose_swapchain_extent(self, surface_capabilities):
+
+def choose_image_count(surface_capabilities):
+    desired_count = surface_capabilities.minImageCount + 1
+    if surface_capabilities.maxImageCount > 0:
+        return min(desired_count, surface_capabilities.maxImageCount)
+    return desired_count
+
+
+def choose_swapchain_extent(surface_capabilities, window_width, window_height): # Modified function signature
+    if surface_capabilities.currentExtent.width != 0xFFFFFFFF:
+        return surface_capabilities.currentExtent
+    else:
+        width = max(surface_capabilities.minImageExtent.width,
+                    min(surface_capabilities.maxImageExtent.width, window_width))
+        height = max(surface_capabilities.minImageExtent.height,
+                        min(surface_capabilities.maxImageExtent.height, window_height))
+        return vk.VkExtent2D(width=width, height=height)
+
+    def choose_swapchain_extent(self, surface_capabilities): # No changes here
         if surface_capabilities.currentExtent.width != 0xFFFFFFFF:
             return surface_capabilities.currentExtent
         else:
