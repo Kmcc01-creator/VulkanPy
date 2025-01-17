@@ -37,7 +37,8 @@ class VulkanRenderer:
 
         # Test entity
         entity = self.world.create_entity()
-        self.world.add_component(entity, Camera())
+        self.camera_component = Camera() # Store camera component
+        self.world.add_component(entity, self.camera_component)
         self.world.add_component(entity, Transform(position=np.array([0.0, 0.0, 0.0]), rotation=np.array([0.0, 0.0, 0.0]), scale=np.array([1.0, 1.0, 1.0])))
 
         mesh = Mesh(vertices=[], indices=[])

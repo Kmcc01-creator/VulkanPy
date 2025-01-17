@@ -19,7 +19,7 @@ def main():
     input_handler = InputHandler(window)
 
     while not glfw.window_should_close(window):
-        input_handler.process_input()
+        input_handler.process_input(renderer.camera_component) # Pass camera component to process_input
         renderer.render()
 
         glfw.poll_events()       # Example using GLFW
