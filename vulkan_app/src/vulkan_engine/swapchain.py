@@ -99,8 +99,78 @@ class Swapchain:
             logger.error(f"Unexpected error during swapchain creation: {e}")
             raise
 
+def create_swapchain(vulkan_engine): # New function to create swapchain
+    try:
+        surface_capabilities = vk.vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vulkan_engine.physical_device, vulkan_engine.surface)
+        surface_format = choose_surface_format(vulkan_engine.physical_device, vulkan_engine.surface)
+        present_mode = choose_present_mode(vulkan_engine.physical_device, vulkan_engine.surface)
+        image_count = choose_image_count(surface_capabilities)
+        swapchain_extent = choose_swapchain_extent(surface_capabilities, vulkan_engine.window.width, vulkan_engine.window.height) # Access window dimensions through vulkan_engine.window
 
-    def choose_image_count(self, surface_capabilities): # No changes here
+        swapchain_create_info = vk.VkSwapchainCreateInfoKHR(
+            sType=vk.VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+            surface=vulkan_engine.surface,
+            minImageCount=image_count,
+            imageFormat=surface_format.format,
+            imageColorSpace=surface_format.colorSpace,
+            imageExtent=swapchain_extent,
+            imageArrayLayers=1,
+            imageUsage=vk.VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+            imageSharingMode=vk.VK_SHARING_MODE_EXCLUSIVE,
+            queueFamilyIndexCount=0,
+            pQueueFamilyIndices=None,
+            preTransform=surface_capabilities.currentTransform,
+            compositeAlpha=vk.VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+            presentMode=present_mode,
+            clipped=vk.VK_TRUE,
+            oldSwapchain=None,
+        )
+
+        if vulkan_engine.graphics_queue_family_index != vulkan_engine.present_queue_family_index:
+            swapchain_create_info.imageSharingMode = vk.VK_SHARING_MODE_CONCURRENT
+            swapchain_create_info.queueFamilyIndexCount = 2
+            swapchain_create_info.pQueueFamilyIndices = [vulkan_engine.graphics_queue_family_index, vulkan_engine.present_queue_family_index]
+
+        swapchain = vk.vkCreateSwapchainKHR(vulkan_engine.device, swapchain_create_info, None)
+        swapchain_images = vk.vkGetSwapchainImagesKHR(vulkan_engine.device, swapchain)
+        return swapchain, swapchain_extent, swapchain_images
+    except vk.VkError as e:
+        raise Exception(f"Failed to create swapchain: {e}")
+
+def choose_present_mode(physical_device, surface):
+    present_modes = vk.vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface)
+    
+    preferred_modes = [vk.VK_PRESENT_MODE_MAILBOX_KHR, vk.VK_PRESENT_MODE_IMMEDIATE_KHR]
+    for mode in preferred_modes:
+        if mode in present_modes:
+            return mode
+
+    return vk.VK_PRESENT_MODE_FIFO_KHR
+
+def choose_image_count(surface_capabilities):
+    desired_count = surface_capabilities.minImageCount + 1
+    if surface_capabilities.maxImageCount > 0:
+        return min(desired_count, surface_capabilities.maxImageCount)
+    return desired_count
+
+def choose_swapchain_extent(surface_capabilities, window_width, window_height):
+    if surface_capabilities.currentExtent.width != 0xFFFFFFFF:
+        return surface_capabilities.currentExtent
+    else:
+        width = max(surface_capabilities.minImageExtent.width,
+                    min(surface_capabilities.maxImageExtent.width, window_width))
+        height = max(surface_capabilities.minImageExtent.height,
+                        min(surface_capabilities.maxImageExtent.height, window_height))
+        return vk.VkExtent2D(width=width, height=height)
+
+def choose_surface_format(physical_device, surface):
+    formats = vk.vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface)
+    if not formats:
+        raise Exception("No surface formats available.")
+
+    # For simplicity, select the first available format.
+    # In a real application, you might want to add format selection logic here.
+    return formats[0]
         desired_count = surface_capabilities.minImageCount + 1
         if surface_capabilities.maxImageCount > 0:
             return min(desired_count, surface_capabilities.maxImageCount)
