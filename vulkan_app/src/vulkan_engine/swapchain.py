@@ -87,42 +87,9 @@ class Swapchain:
         self.create_descriptor_pool()
         self.create_descriptor_sets()
 
-
-    def create_swapchain(self):
+    def create_swapchain(self): # Modified function to use resource_manager
         try:
-            surface_capabilities = vk.vkGetPhysicalDeviceSurfaceCapabilitiesKHR(self.physical_device, self.surface)
-            surface_format = self.choose_surface_format()
-            present_mode = self.choose_present_mode()
-            image_count = self.choose_image_count(surface_capabilities)
-            swapchain_extent = self.choose_swapchain_extent(surface_capabilities)
-
-            swapchain_create_info = vk.VkSwapchainCreateInfoKHR(
-                sType=vk.VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-                surface=self.surface,
-                minImageCount=image_count,
-                imageFormat=surface_format.format,
-                imageColorSpace=surface_format.colorSpace,
-                imageExtent=swapchain_extent,
-                imageArrayLayers=1,
-                imageUsage=vk.VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-                imageSharingMode=vk.VK_SHARING_MODE_EXCLUSIVE,
-                queueFamilyIndexCount=0,
-                pQueueFamilyIndices=None,
-                preTransform=surface_capabilities.currentTransform,
-                compositeAlpha=vk.VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-                presentMode=present_mode,
-                clipped=vk.VK_TRUE,
-                oldSwapchain=None,
-            )
-
-            if self.graphics_queue_family_index != self.present_queue_family_index:
-                swapchain_create_info.imageSharingMode = vk.VK_SHARING_MODE_CONCURRENT
-                swapchain_create_info.queueFamilyIndexCount = 2
-                swapchain_create_info.pQueueFamilyIndices = [self.graphics_queue_family_index, self.present_queue_family_index]
-
-            self.swapchain = self.resource_manager.create_swapchain(swapchain_create_info)
-            self.extent = swapchain_extent
-            self.swapchain_images = vk.vkGetSwapchainImagesKHR(self.device, self.swapchain)
+            self.swapchain, self.extent, self.swapchain_images = self.resource_manager.create_swapchain(self.renderer) # Use resource_manager to create swapchain
             self.create_image_views()
             logger.info("Swapchain created successfully")
         except vk.VkError as e:
@@ -132,7 +99,8 @@ class Swapchain:
             logger.error(f"Unexpected error during swapchain creation: {e}")
             raise
 
-    def choose_image_count(self, surface_capabilities):
+
+    def choose_image_count(self, surface_capabilities): # No changes here
         desired_count = surface_capabilities.minImageCount + 1
         if surface_capabilities.maxImageCount > 0:
             return min(desired_count, surface_capabilities.maxImageCount)

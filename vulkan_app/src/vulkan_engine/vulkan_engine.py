@@ -34,8 +34,8 @@ class VulkanEngine:
             self.device, self.physical_device, self.graphics_queue_family_index = self.resource_manager.create_device(self.instance, self.enabled_layers) # Create device through ResourceManager
             self.surface = self.create_surface() # Surface creation remains here for now
             self.setup_queues()
-            self.swapchain = Swapchain(self, self.resource_manager)
-            self.create_descriptor_set_layout()
+            self.swapchain = Swapchain(self, self.resource_manager) # No changes here
+            self.create_descriptor_set_layout() # No changes here
             logger.info("VulkanEngine initialized successfully")
         except vk.VkError as e:
             logger.error(f"Vulkan error during initialization: {str(e)}")

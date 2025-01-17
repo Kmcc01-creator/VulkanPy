@@ -48,13 +48,13 @@ class ResourceManager:
         self.add_resource(device, "device")
         return device, physical_device, graphics_queue_family_index
 
-
-    def create_swapchain(self, create_info):
-        swapchain = vk.vkCreateSwapchainKHR(self.device, create_info, None) # No changes here
+    def create_swapchain(self, vulkan_engine): # Modified method signature
+        from vulkan_engine.swapchain import create_swapchain as create_vk_swapchain
+        swapchain, extent, swapchain_images = create_vk_swapchain(vulkan_engine) # Call the new swapchain creation function
         self.add_resource(swapchain, "swapchain")
-        return swapchain
+        return swapchain, extent, swapchain_images
 
-    def __enter__(self):
+    def __enter__(self): # No changes here
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
