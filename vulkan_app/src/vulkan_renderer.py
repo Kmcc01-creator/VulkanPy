@@ -19,6 +19,10 @@ class VulkanRenderer:
         self.render_pass = self.create_render_pass()
         self.pipeline, self.pipeline_layout = self.create_pipeline() # Getting pipeline and layout
         self.framebuffers = self.create_framebuffers()
+        self.create_command_pool() # New: create command pool
+        self.create_command_buffers() # New: create command buffers
+        self.create_sync_objects() # New: create synchronization objects
+
 
     def create_instance(self):
         from vulkan_engine.instance import create_instance as create_vk_instance
@@ -46,6 +50,19 @@ class VulkanRenderer:
         from vulkan_engine.swapchain import create_framebuffers as create_vk_framebuffers
         return create_vk_framebuffers(self.device, self.swapchain, self.render_pass, self.swapchain_extent)
 
+    def create_command_pool(self): # New function
+        from vulkan_engine.command_buffer import create_command_pool as create_vk_command_pool
+        self.command_pool = create_vk_command_pool(self.device, self.graphics_queue_family_index)
+
+    def create_command_buffers(self): # New function
+        from vulkan_engine.command_buffer import create_command_buffers as create_vk_command_buffers
+        self.command_buffers = create_vk_command_buffers(self.device, self.command_pool, len(self.framebuffers))
+
+    def create_sync_objects(self): # New function
+        from vulkan_engine.synchronization import create_sync_objects as create_vk_sync_objects
+        self.image_available_semaphores, self.render_finished_semaphores, self.in_flight_fences = create_vk_sync_objects(self.device, len(self.framebuffers))
+
+
     def render(self):
         # ... Rendering commands ...
         # Acquire next image from swapchain
@@ -53,6 +70,7 @@ class VulkanRenderer:
         # Submit command buffer to graphics queue
         # Present image to screen
         # Synchronization primitives (semaphores, fences) will be added here
+        # ... (Implementation for command buffer recording and submission) ...
 
     def cleanup(self):
         vk.vkDestroyPipeline(self.device, self.pipeline, None)
