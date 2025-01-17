@@ -132,8 +132,10 @@ class ResourceManager:
 
         self.copy_buffer(staging_buffer, vertex_buffer, buffer_size)
 
-        self.destroy_buffer(staging_buffer)
-        self.free_memory(staging_buffer_memory)
+        self.add_resource(staging_buffer, "buffer", self.destroy_buffer)
+        self.add_resource(staging_buffer_memory, "memory", self.free_memory)
+        self.add_resource(vertex_buffer, "buffer", self.destroy_buffer)
+        self.add_resource(vertex_buffer_memory, "memory", self.free_memory)
 
         return vertex_buffer, vertex_buffer_memory, len(vertices)
 

@@ -1,6 +1,6 @@
 import vulkan as vk
 import logging
-from typing import Any, List, Tuple
+from typing import Any
 from vulkan_engine.vulkan_engine import VulkanEngine
 from vulkan_renderer.render_manager import RenderManager
 from src.ecs.world import World
@@ -21,8 +21,7 @@ class VulkanRenderer:
             self.vulkan_engine = VulkanEngine(window)
             self.shader_manager = ShaderManager(self.vulkan_engine.device)
             self.render_manager = RenderManager(self.vulkan_engine, self.shader_manager)
-            self.current_frame = 0
-            self.world: World
+            self.world: World = World()
 
             glfw.set_framebuffer_size_callback(window, self.framebuffer_resize_callback)
 
@@ -43,7 +42,6 @@ class VulkanRenderer:
 
     def init_world(self) -> None:
         try:
-            self.world = World()
             self.render_system = RenderSystem(self)
             self.camera_system = CameraSystem(self)
             self.world.add_system(self.camera_system)
@@ -97,61 +95,6 @@ class VulkanRenderer:
 
     def framebuffer_resize_callback(self, window: Any, width: int, height: int) -> None:
         self.vulkan_engine.recreate_swapchain()
-
-    def cleanup(self) -> None:
-        self.vulkan_engine.cleanup()
-
-    def record_command_buffer(self, command_buffer: vk.VkCommandBuffer, image_index: int) -> None:
-        begin_info = vk.VkCommandBufferBeginInfo(
-            sType=vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-        )
-
-        try:
-            vk.vkBeginCommandBuffer(command_buffer, begin_info)
-        except vk.VkError as e:
-            logger.error(f"Failed to begin recording command buffer: {e}")
-            raise
-
-        render_pass_begin_info = vk.VkRenderPassBeginInfo(
-            sType=vk.VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-            renderPass=self.render_pass,
-            framebuffer=self.framebuffers[image_index],
-            renderArea=vk.VkRect2D(
-                offset=vk.VkOffset2D(x=0, y=0),
-                extent=self.swapchain_extent,
-            ),
-            clearValueCount=1,
-            pClearValues=[vk.VkClearValue(color=vk.VkClearColorValue(float32=[0.0, 0.0, 0.0, 1.0]))],
-        )
-
-        vk.vkCmdBeginRenderPass(command_buffer, render_pass_begin_info, vk.VK_SUBPASS_CONTENTS_INLINE)
-        vk.vkCmdBindPipeline(command_buffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, self.pipeline)
-        vk.vkCmdBindDescriptorSets(command_buffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, self.pipeline_layout, 0, 1, self.descriptor_sets, 0, None)
-
-        viewport = vk.VkViewport(
-            x=0.0,
-            y=0.0,
-            width=float(self.swapchain_extent.width),
-            height=float(self.swapchain_extent.height),
-            minDepth=0.0,
-            maxDepth=1.0,
-        )
-        vk.vkCmdSetViewport(command_buffer, 0, 1, [viewport])
-
-        scissor = vk.VkRect2D(
-            offset=vk.VkOffset2D(x=0, y=0),
-            extent=self.swapchain_extent,
-        )
-        vk.vkCmdSetScissor(command_buffer, 0, 1, [scissor])
-
-        self.render_system.render(command_buffer, self.world)
-        vk.vkCmdEndRenderPass(command_buffer)
-
-        try:
-            vk.vkEndCommandBuffer(command_buffer)
-        except vk.VkError as e:
-            logger.error(f"Failed to end recording command buffer: {e}")
-            raise
 
     def cleanup(self) -> None:
         logger.info("Cleaning up VulkanRenderer")
