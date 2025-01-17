@@ -2,6 +2,7 @@ from dataclasses import dataclass
 import numpy as np
 from src.vertex import Vertex
 from src.object_loader import load_obj
+from src.mesh_renderer import MeshRenderer, MeshType
 import vulkan as vk
 
 @dataclass
@@ -12,15 +13,21 @@ class Transform:
 
 @dataclass
 class Mesh:
-    vertices: np.ndarray
-    indices: np.ndarray
+    mesh_renderer: MeshRenderer
     vertex_buffer: vk.VkBuffer = None
     vertex_buffer_memory: vk.VkDeviceMemory = None
+    index_buffer: vk.VkBuffer = None
+    index_buffer_memory: vk.VkDeviceMemory = None
     vertex_count: int = 0
+    index_count: int = 0
 
-    def create_vertex_buffer(self, resource_manager, filepath):
-        self.vertices, self.indices = load_obj(filepath)
-        self.vertex_buffer, self.vertex_buffer_memory, self.vertex_count = resource_manager.create_vertex_buffer(self.vertices)
+    def create_buffers(self, resource_manager):
+        self.mesh_renderer.generate_mesh()
+        vertices = self.mesh_renderer.get_vertex_data()
+        indices = self.mesh_renderer.get_index_data()
+        
+        self.vertex_buffer, self.vertex_buffer_memory, self.vertex_count = resource_manager.create_vertex_buffer(vertices)
+        self.index_buffer, self.index_buffer_memory, self.index_count = resource_manager.create_index_buffer(indices)
 
 @dataclass
 class Material:

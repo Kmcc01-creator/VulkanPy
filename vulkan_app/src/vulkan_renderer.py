@@ -6,6 +6,7 @@ from src.ecs.world import World
 from src.ecs.systems import RenderSystem, CameraSystem
 from src.ecs.components import Transform, Mesh, Material, Camera, Light, Shader
 from src.shader_manager import ShaderManager
+from src.mesh_renderer import MeshRenderer, MeshType
 import numpy as np
 import glfw
 
@@ -52,14 +53,27 @@ class VulkanRenderer:
         self.world.add_component(light_entity, Light(position=np.array([5.0, 5.0, 5.0]), color=np.array([1.0, 1.0, 1.0]), intensity=1.0))
         self.world.add_component(light_entity, Transform(position=np.array([5.0, 5.0, 5.0]), rotation=np.array([0.0, 0.0, 0.0]), scale=np.array([1.0, 1.0, 1.0])))
 
-        # Object
-        object_entity = self.world.create_entity()
-        mesh = Mesh(vertices=[], indices=[])
-        mesh.create_vertex_buffer(self.vulkan_engine.resource_manager, "vulkan_app/models/sphere.obj")
-        self.world.add_component(object_entity, mesh)
-        self.world.add_component(object_entity, Material(albedo=np.array([0.7, 0.7, 0.7]), metallic=0.5, roughness=0.5, ao=1.0))
-        self.world.add_component(object_entity, Transform(position=np.array([0.0, 0.0, 0.0]), rotation=np.array([0.0, 0.0, 0.0]), scale=np.array([1.0, 1.0, 1.0])))
-        self.world.add_component(object_entity, Shader(vertex_shader='pbr', fragment_shader='pbr'))
+        # Objects
+        self.create_mesh_entity(MeshType.SPHERE, np.array([0.0, 0.0, 0.0]))
+        self.create_mesh_entity(MeshType.CUBE, np.array([2.0, 0.0, 0.0]))
+        self.create_mesh_entity(MeshType.CYLINDER, np.array([-2.0, 0.0, 0.0]))
+
+        # Custom mesh
+        def custom_function(u, v):
+            return np.sin(u) * np.cos(v)
+        
+        custom_mesh = MeshRenderer.from_function(custom_function, (-np.pi, np.pi), (-np.pi, np.pi), 32)
+        self.create_mesh_entity(MeshType.CUSTOM, np.array([0.0, 2.0, 0.0]), custom_mesh)
+
+    def create_mesh_entity(self, mesh_type, position, custom_mesh=None):
+        entity = self.world.create_entity()
+        mesh_renderer = custom_mesh if custom_mesh else MeshRenderer(mesh_type)
+        mesh = Mesh(mesh_renderer=mesh_renderer)
+        mesh.create_buffers(self.vulkan_engine.resource_manager)
+        self.world.add_component(entity, mesh)
+        self.world.add_component(entity, Material(albedo=np.array([0.7, 0.7, 0.7]), metallic=0.5, roughness=0.5, ao=1.0))
+        self.world.add_component(entity, Transform(position=position, rotation=np.array([0.0, 0.0, 0.0]), scale=np.array([1.0, 1.0, 1.0])))
+        self.world.add_component(entity, Shader(vertex_shader='pbr', fragment_shader='pbr'))
 
     def render(self):
         self.render_manager.render(self.world)
