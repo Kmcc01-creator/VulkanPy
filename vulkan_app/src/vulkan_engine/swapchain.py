@@ -1,6 +1,9 @@
 import vulkan as vk
+import logging
 from vulkan_engine.pipeline import create_pipeline
 from vulkan_engine.descriptors import create_uniform_buffers, create_descriptor_pool, create_descriptor_sets
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -90,7 +93,7 @@ class Swapchain:
             surface_capabilities = vk.vkGetPhysicalDeviceSurfaceCapabilitiesKHR(self.physical_device, self.surface)
             surface_format = self.choose_surface_format()
 
-            present_mode = vk.VK_PRESENT_MODE_FIFO_KHR
+            present_mode = self.choose_present_mode()
             image_count = min(surface_capabilities.maxImageCount, surface_capabilities.minImageCount + 1) if surface_capabilities.maxImageCount > 0 else surface_capabilities.minImageCount + 1
 
             swapchain_create_info = vk.VkSwapchainCreateInfoKHR(
@@ -126,6 +129,7 @@ class Swapchain:
             self.extent = surface_capabilities.currentExtent
             self.swapchain_images = vk.vkGetSwapchainImagesKHR(self.device, self.swapchain)
             self.create_image_views()
+            logger.info("Swapchain created successfully")
         except vk.VkError as e:
             logger.error(f"Failed to create swapchain: {e}")
             raise
