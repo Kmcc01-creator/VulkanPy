@@ -22,7 +22,7 @@ class VulkanRenderer:
         self.create_command_pool() # New: create command pool
         self.create_command_buffers() # New: create command buffers
         self.create_sync_objects() # New: create synchronization objects
-        self.create_vertex_buffer()
+
 
         self.current_frame = 0
         self.graphics_queue = vk.vkGetDeviceQueue(self.device, self.graphics_queue_family_index, 0)
@@ -193,7 +193,6 @@ class VulkanRenderer:
             vk.vkEndCommandBuffer(command_buffer)
         except vk.VkError as e:
             raise Exception(f"Failed to end recording command buffer: {e}")
-
     def create_vertex_buffer(self):
         from src.vertex import Vertex
         vertices = [
@@ -201,7 +200,25 @@ class VulkanRenderer:
             Vertex([0.5, -0.5, 0.0], [0.0, 1.0, 0.0]),
             Vertex([0.0, 0.5, 0.0], [0.0, 0.0, 1.0]),
         ]
-        buffer_size = len(vertices) * 2 * 4 * 3 # Number of vertices * 2 attributes (pos, color) * 4 bytes/float * 3 floats/attribute
+        self.vertex_count = len(vertices)
+        buffer_size = self.vertex_count * Vertex.sizeof()
+
+        staging_buffer, staging_buffer_memory = self.create_buffer(
+            buffer_size, vk.VK_BUFFER_USAGE_TRANSFER_SRC_BIT, vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+        )
+
+        data_ptr = vk.vkMapMemory(self.device, staging_buffer_memory, 0, buffer_size, 0)
+        vk.ffi.memmove(data_ptr, vertices.buffer_info()[0], buffer_size) # Using sizeof for accurate size calculation
+        vk.vkUnmapMemory(self.device, staging_buffer_memory)
+
+        self.vertex_buffer, self.vertex_buffer_memory = self.create_buffer(
+            buffer_size, vk.VK_BUFFER_USAGE_TRANSFER_DST_BIT | vk.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, vk.VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+        )
+
+        self.copy_buffer(staging_buffer, self.vertex_buffer, buffer_size)
+
+        vk.vkDestroyBuffer(self.device, staging_buffer, None)
+        vk.vkFreeMemory(self.device, staging_buffer_memory, None)
 
         staging_buffer, staging_buffer_memory = self.create_buffer(
             buffer_size, vk.VK_BUFFER_USAGE_TRANSFER_SRC_BIT, vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
