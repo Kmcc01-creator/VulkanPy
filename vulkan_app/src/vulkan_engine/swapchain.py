@@ -82,6 +82,10 @@ class Swapchain:
         self.create_uniform_buffers()
         self.create_descriptor_pool()
         self.create_descriptor_sets()
+        glfw.set_framebuffer_size_callback(self.renderer.window, self.framebuffer_resize_callback) # Set callback here
+
+    def framebuffer_resize_callback(self, window, width, height):
+        self.recreate_swapchain()
 
 
     def create_swapchain(self):

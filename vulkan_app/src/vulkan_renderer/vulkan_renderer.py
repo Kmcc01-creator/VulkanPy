@@ -16,12 +16,6 @@ class VulkanRenderer:
         self.framebuffers = self.swapchain.framebuffers
         self.current_frame = 0
 
-        glfw.set_framebuffer_size_callback(self.window, self.framebuffer_resize_callback)
-
-    def framebuffer_resize_callback(self, window, width, height):
-        self.vulkan_engine.recreate_swapchain() # Delegate swapchain recreation to VulkanEngine
-
-
     def cleanup(self):
         vk.vkDeviceWaitIdle(self.vulkan_engine.device) # Wait for device to be idle before destroying resources
         self.render_manager.cleanup()
