@@ -1,0 +1,68 @@
+# Dependency Graph for Vulkan Graphics Application
+
+```mermaid
+graph TD
+    A[main.py] --> B[Application]
+    B --> C[WindowManager]
+    B --> D[VulkanRenderer]
+    B --> E[InputHandler]
+    D --> F[VulkanEngine]
+    D --> G[ShaderManager]
+    D --> H[RenderManager]
+    D --> I[World]
+    F --> J[Swapchain]
+    F --> K[ResourceManager]
+    F --> L[DescriptorSetLayout]
+    H --> M[CommandBuffer]
+    H --> N[Synchronization]
+    I --> O[Entity]
+    I --> P[Component]
+    I --> Q[System]
+    P --> R[Transform]
+    P --> S[Mesh]
+    P --> T[Material]
+    P --> U[Camera]
+    P --> V[Light]
+    P --> W[Shader]
+    Q --> X[RenderSystem]
+    Q --> Y[CameraSystem]
+    D --> Z[MeshRenderer]
+    Z --> AA[Vertex]
+    D --> AB[Config]
+    F --> AC[Instance]
+    F --> AD[Device]
+    F --> AE[Surface]
+    F --> AF[Pipeline]
+    G --> AG[ShaderModule]
+    K --> AH[Buffer]
+    K --> AI[Image]
+    K --> AJ[Sampler]
+    K --> AK[DescriptorSet]
+    L --> AL[UniformBuffer]
+    M --> AM[CommandPool]
+    N --> AN[Semaphore]
+    N --> AO[Fence]
+```
+
+This dependency graph shows the relationships between the main components of our Vulkan graphics application. Here's a brief explanation of the key components and their relationships:
+
+1. main.py: The entry point of the application.
+2. Application: The main application class that orchestrates all components.
+3. WindowManager: Handles window creation and management using GLFW.
+4. VulkanRenderer: The core rendering class that utilizes Vulkan.
+5. InputHandler: Processes user input.
+6. VulkanEngine: Manages Vulkan initialization and core functionality.
+7. ShaderManager: Handles shader loading and compilation.
+8. RenderManager: Manages the rendering process.
+9. World: The main container for the Entity Component System (ECS).
+10. Swapchain, ResourceManager, DescriptorSetLayout: Key Vulkan components.
+11. Entity, Component, System: Core elements of the ECS.
+12. Various Components: Transform, Mesh, Material, Camera, Light, Shader.
+13. Systems: RenderSystem and CameraSystem.
+14. MeshRenderer and Vertex: Handle mesh generation and vertex data.
+15. Config: Manages application configuration.
+16. Vulkan-specific components: Instance, Device, Surface, Pipeline, etc.
+17. Resource-related components: Buffer, Image, Sampler, DescriptorSet, etc.
+18. Synchronization components: Semaphore and Fence.
+
+This graph helps visualize how data flows through the application and how different components interact with each other. It can be useful for identifying potential optimizations, understanding the overall structure of the application, and planning future enhancements or refactoring efforts.
