@@ -162,7 +162,6 @@ def create_pipeline(device, swapchain_extent, render_pass): # Added render_pass
         subpass=0,
     )
 
-    from src.vertex import Vertex
     vertex_input_bindings = Vertex.get_binding_descriptions()
     vertex_input_attributes = Vertex.get_attribute_descriptions()
 
