@@ -1,6 +1,7 @@
 import vulkan as vk
 from vulkan_engine.command_buffer import create_command_pool, create_command_buffers
 from vulkan_engine.synchronization import create_sync_objects
+from src.ecs.components import Mesh, Transform
 
 class RenderManager:
     def __init__(self, vulkan_engine):
@@ -65,8 +66,7 @@ class RenderManager:
     def reset_command_buffer(self):
         vk.vkResetCommandBuffer(self.command_buffers[self.current_frame], 0)
 
-        self.record_command_buffer(self.command_buffers[self.current_frame], image_index, world)
-
+    def submit_command_buffer(self, image_index):
         submit_info = vk.VkSubmitInfo(
             sType=vk.VK_STRUCTURE_TYPE_SUBMIT_INFO,
             waitSemaphoreCount=1,
@@ -80,6 +80,7 @@ class RenderManager:
 
         vk.vkQueueSubmit(self.vulkan_engine.graphics_queue, 1, [submit_info], self.in_flight_fences[self.current_frame])
 
+    def present_image(self, image_index):
         present_info = vk.VkPresentInfoKHR(
             sType=vk.VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
             waitSemaphoreCount=1,
@@ -93,9 +94,6 @@ class RenderManager:
             vk.vkQueuePresentKHR(self.vulkan_engine.present_queue, present_info)
         except vk.VkErrorOutOfDateKHR:
             self.vulkan_engine.recreate_swapchain()
-            return
-
-        self.current_frame = (self.current_frame + 1) % len(self.vulkan_engine.swapchain.swapchain_images)
 
     def record_command_buffer(self, command_buffer, image_index, world):
         begin_info = vk.VkCommandBufferBeginInfo(
