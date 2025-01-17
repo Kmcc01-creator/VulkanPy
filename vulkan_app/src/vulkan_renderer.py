@@ -87,13 +87,6 @@ class VulkanRenderer:
         vk.vkDestroySwapchainKHR(self.device, self.swapchain, None)
 
         # Recreate swapchain and related resources
-                extent=self.swapchain_extent,
-            ),
-            clearValueCount=1,
-            pClearValues=[vk.VkClearValue(color=vk.VkClearColorValue(float32=[0.0, 0.0, 0.0, 1.0]))],
-        )
-
-
         self.swapchain, self.swapchain_extent = self.create_swapchain()
         self.render_pass = self.create_render_pass()
         self.framebuffers = self.create_framebuffers()
