@@ -95,7 +95,7 @@ class VulkanEngine:
             )
         ]
         self.descriptor_set_layout = DescriptorSetLayout(self.device, bindings)
-        self.resource_manager.add_resource(self.descriptor_set_layout.layout, "descriptor_set_layout", self.resource_manager.destroy_descriptor_set_layout)
+        self.resource_manager.add_resource(self.descriptor_set_layout, "descriptor_set_layout")
 
     def cleanup(self):
         logger.info("Cleaning up VulkanEngine resources")
@@ -115,12 +115,6 @@ class VulkanEngine:
         logger.info("VulkanEngine cleanup completed")
 
     def copy_buffer(self, src_buffer, dst_buffer, size):
-        command_buffer = self.resource_manager.begin_single_time_commands()
-
-        copy_region = vk.VkBufferCopy(srcOffset=0, dstOffset=0, size=size)
-        vk.vkCmdCopyBuffer(command_buffer, src_buffer, dst_buffer, 1, [copy_region])
-
-        self.resource_manager.end_single_time_commands(command_buffer)
-
+        self.resource_manager.copy_buffer(src_buffer, dst_buffer, size)
 
 
