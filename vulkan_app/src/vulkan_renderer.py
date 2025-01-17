@@ -93,14 +93,3 @@ class VulkanRenderer:
         vk.vkDestroySurfaceKHR(self.instance, self.surface, None)
         vk.vkDestroyDevice(self.device, None)
         vk.vkDestroyInstance(self.instance, None)
-        vk.vkDestroyPipeline(self.device, self.pipeline, None)
-        vk.vkDestroyPipelineLayout(self.device, self.pipeline_layout, None)
-        vk.vkDestroyRenderPass(self.device, self.render_pass, None)
-
-        for framebuffer in self.framebuffers:
-            vk.vkDestroyFramebuffer(self.device, framebuffer, None)
-
-        vk.vkDestroySwapchainKHR(self.device, self.swapchain, None)
-        vk.vkDestroySurfaceKHR(self.instance, self.surface, None)
-        vk.vkDestroyDevice(self.device, None)
-        vk.vkDestroyInstance(self.instance, None)
