@@ -10,8 +10,23 @@ from src.shader_manager import ShaderManager
 from src.mesh_renderer import MeshRenderer, MeshType
 import numpy as np
 import glfw
+import glm
 
 logger = logging.getLogger(__name__)
+
+class UniformBufferObject(ctypes.Structure):
+    _fields_ = [
+        ("model", glm.mat4),
+        ("view", glm.mat4),
+        ("proj", glm.mat4),
+    ]
+
+class LightUBO(ctypes.Structure):
+    _fields_ = [
+        ("lightPos", glm.vec3),
+        ("viewPos", glm.vec3),
+        ("lightColor", glm.vec3),
+    ]
 
 class VulkanRenderer:
     def __init__(self, window: Any) -> None:
@@ -27,11 +42,55 @@ class VulkanRenderer:
 
             self.init_world()
             self.load_shaders()
+            self.create_uniform_buffers()
+            self.create_descriptor_sets()
             logger.info("VulkanRenderer initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize VulkanRenderer: {str(e)}")
             self.cleanup()
             raise
+
+    def create_uniform_buffers(self):
+        buffer_size = ctypes.sizeof(UniformBufferObject)
+        self.uniform_buffers = []
+        for _ in range(len(self.vulkan_engine.swapchain.swapchain_images)):
+            buffer, memory = self.vulkan_engine.resource_manager.create_buffer(
+                buffer_size,
+                vk.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+            )
+            self.uniform_buffers.append((buffer, memory))
+
+        light_buffer_size = ctypes.sizeof(LightUBO)
+        self.light_uniform_buffer, self.light_uniform_buffer_memory = self.vulkan_engine.resource_manager.create_buffer(
+            light_buffer_size,
+            vk.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+        )
+
+    def create_descriptor_sets(self):
+        # Update this method to include the new light uniform buffer
+        # You'll need to modify the descriptor set layout and allocation to include the new buffer
+        pass
+
+    def update_uniform_buffer(self, current_image):
+        ubo = UniformBufferObject()
+        ubo.model = glm.mat4()
+        ubo.view = self.camera.get_view_matrix()
+        ubo.proj = self.camera.get_projection_matrix()
+
+        data = self.vulkan_engine.resource_manager.map_memory(self.uniform_buffers[current_image][1])
+        ctypes.memmove(data, ctypes.addressof(ubo), ctypes.sizeof(ubo))
+        self.vulkan_engine.resource_manager.unmap_memory(self.uniform_buffers[current_image][1])
+
+        light_ubo = LightUBO()
+        light_ubo.lightPos = self.light.position
+        light_ubo.viewPos = self.camera.position
+        light_ubo.lightColor = self.light.color
+
+        light_data = self.vulkan_engine.resource_manager.map_memory(self.light_uniform_buffer_memory)
+        ctypes.memmove(light_data, ctypes.addressof(light_ubo), ctypes.sizeof(light_ubo))
+        self.vulkan_engine.resource_manager.unmap_memory(self.light_uniform_buffer_memory)
 
     def load_shaders(self) -> None:
         try:
