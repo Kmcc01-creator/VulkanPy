@@ -13,6 +13,9 @@ def create_shader_module(device, shader_code):
         raise Exception(f"Failed to create shader module: {e}")
 
 
+from vulkan_engine.descriptors import DescriptorSetLayout
+from src.vertex import Vertex
+
 def create_pipeline(device, swapchain_extent, render_pass): # Added render_pass
     # ... (Load shader code from shader.vert and shader.frag) ...
     with open("vulkan_app/shaders/shader.vert", "rb") as f:

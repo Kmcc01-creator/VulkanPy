@@ -247,15 +247,21 @@ class VulkanRenderer:
         self.descriptor_sets = vk.vkAllocateDescriptorSets(self.device, layout_info)
 
         buffer_info = vk.VkDescriptorBufferInfo(
-            buffer=self.uniform_buffer,
+                buffer=uniform_buffer.buffer,
             offset=0,
             range=4 * 4 * 4, # Size of mat4
         )
 
         write_descriptor_sets = []
-        write_descriptor_sets.append(vk.VkWriteDescriptorSet(
-            sType=vk.VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            dstSet=self.descriptor_sets[i],
+        for i, uniform_buffer in enumerate(self.uniform_buffers):
+            buffer_info = vk.VkDescriptorBufferInfo(
+                buffer=uniform_buffer.buffer,
+                offset=0,
+                range=uniform_buffer.size,
+            )
+                write_descriptor_sets.append(vk.VkWriteDescriptorSet(
+                sType=vk.VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                dstSet=self.descriptor_sets[i],
             dstBinding=0,
             dstArrayElement=0,
             descriptorCount=1,
