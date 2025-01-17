@@ -6,16 +6,20 @@ from src.ecs.systems import RenderSystem
 from src.ecs.components import Transform, Mesh, Material
 from vulkan_engine.resource_manager import ResourceManager # Importing ResourceManager
 import numpy as np
+from src.ecs.systems import CameraSystem # Import CameraSystem
 
 class VulkanRenderer:
     def __init__(self, window):
         self.window = window
         self.world = World()
         self.render_system = RenderSystem(self)
+        self.camera_system = CameraSystem(self) # Initialize CameraSystem
+        self.world.add_system(self.camera_system) # Add CameraSystem to world
         self.world.add_system(self.render_system)
 
         # Test entity
         entity = self.world.create_entity()
+        self.world.add_component(entity, Camera()) # Add Camera component to entity
         self.world.add_component(entity, Transform(position=np.array([0.0, 0.0, 0.0]), rotation=np.array([0.0, 0.0, 0.0]), scale=np.array([1.0, 1.0, 1.0])))
 
         mesh = Mesh(vertices=[], indices=[]) # Initialize empty mesh
