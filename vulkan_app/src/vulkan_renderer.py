@@ -17,12 +17,14 @@ class VulkanRenderer:
         # Swapchain creation (requires window surface)
         self.swapchain, self.swapchain_extent = self.create_swapchain() # Getting swapchain extent
         self.render_pass = self.create_render_pass()
-        self.pipeline, self.pipeline_layout = self.create_pipeline() # Getting pipeline and layout
+        self.pipeline, self.pipeline_layout, self.descriptor_set_layout = self.create_pipeline() # Getting pipeline, layout, and descriptor set layout
         self.framebuffers = self.create_framebuffers()
         self.create_command_pool() # New: create command pool
         self.create_command_buffers() # New: create command buffers
         self.create_sync_objects() # New: create synchronization objects
         self.create_uniform_buffer()
+        self.create_descriptor_pool()
+        self.create_descriptor_sets()
 
         self.current_frame = 0
         self.graphics_queue = vk.vkGetDeviceQueue(self.device, self.graphics_queue_family_index, 0)
@@ -226,6 +228,48 @@ class VulkanRenderer:
         self.uniform_buffer, self.uniform_buffer_memory = self.create_buffer(
             buffer_size, vk.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
         )
+
+    def create_descriptor_pool(self):
+        pool_sizes = []
+        pool_sizes.append(vk.VkDescriptorPoolSize(type=vk.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, descriptorCount=1))
+
+        pool_create_info = vk.VkDescriptorPoolCreateInfo(
+            sType=vk.VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+            maxSets=1,
+            poolSizeCount=len(pool_sizes),
+            pPoolSizes=pool_sizes
+        )
+
+        self.descriptor_pool = vk.vkCreateDescriptorPool(self.device, pool_create_info, None)
+
+
+    def create_descriptor_sets(self):
+        layout_info = vk.VkDescriptorSetAllocateInfo(
+            sType=vk.VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+            descriptorPool=self.descriptor_pool,
+            descriptorSetCount=1,
+            pSetLayouts=[self.descriptor_set_layout],
+        )
+        self.descriptor_sets = vk.vkAllocateDescriptorSets(self.device, layout_info)
+
+        buffer_info = vk.VkDescriptorBufferInfo(
+            buffer=self.uniform_buffer,
+            offset=0,
+            range=4 * 4 * 4, # Size of mat4
+        )
+
+        write_descriptor_sets = []
+        write_descriptor_sets.append(vk.VkWriteDescriptorSet(
+            sType=vk.VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            dstSet=self.descriptor_sets[0],
+            dstBinding=0,
+            dstArrayElement=0,
+            descriptorCount=1,
+            descriptorType=vk.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            pBufferInfo=[buffer_info],
+        ))
+
+        vk.vkUpdateDescriptorSets(self.device, len(write_descriptor_sets), write_descriptor_sets, 0, None)
 
     def create_buffer(self, size, usage, properties):
         from vulkan_engine.buffer import create_buffer as create_vk_buffer
