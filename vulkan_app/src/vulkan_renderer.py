@@ -292,50 +292,11 @@ class VulkanRenderer:
             vk.vkDestroyFramebuffer(self.device, framebuffer, None)
 
         vk.vkDestroySwapchainKHR(self.device, self.swapchain, None)
-        vk.vkDestroySurfaceKHR(self.instance, self.surface, None)
-        vk.vkDestroyDevice(self.device, None)
-        vk.vkDestroyBuffer(self.device, self.vertex_buffer, None)
-        vk.vkFreeMemory(self.device, self.vertex_buffer_memory, None)
-        self.destroy_sync_objects()
-            vk.vkDestroyFence(self.device, fence, None)
-
-        for semaphore in self.image_available_semaphores:
-            vk.vkDestroySemaphore(self.device, semaphore, None)
-
-        for semaphore in self.render_finished_semaphores:
-            vk.vkDestroySemaphore(self.device, semaphore, None)
-
-        vk.vkDestroyCommandPool(self.device, self.command_pool, None)
-
-        vk.vkDestroyPipeline(self.device, self.pipeline, None)
-        vk.vkDestroyPipelineLayout(self.device, self.pipeline_layout, None)
-        vk.vkDestroyRenderPass(self.device, self.render_pass, None)
-
-        for framebuffer in self.framebuffers:
-            vk.vkDestroyFramebuffer(self.device, framebuffer, None)
-
-        vk.vkDestroySwapchainKHR(self.device, self.swapchain, None)
-        vk.vkDestroySurfaceKHR(self.instance, self.surface, None)
-        vk.vkDestroyDevice(self.device, None)
-        vk.vkDestroyInstance(self.instance, None)
-            vk.vkDestroyFence(self.device, fence, None)
-
-        for semaphore in self.image_available_semaphores:
-            vk.vkDestroySemaphore(self.device, semaphore, None)
-
-        for semaphore in self.render_finished_semaphores:
-            vk.vkDestroySemaphore(self.device, semaphore, None)
-
-        vk.vkDestroyCommandPool(self.device, self.command_pool, None)
-
-        vk.vkDestroyPipeline(self.device, self.pipeline, None)
-        vk.vkDestroyPipelineLayout(self.device, self.pipeline_layout, None)
-        vk.vkDestroyRenderPass(self.device, self.render_pass, None)
-
-        for framebuffer in self.framebuffers:
-            vk.vkDestroyFramebuffer(self.device, framebuffer, None)
-
-        vk.vkDestroySwapchainKHR(self.device, self.swapchain, None)
-        vk.vkDestroySurfaceKHR(self.instance, self.surface, None)
-        vk.vkDestroyDevice(self.device, None)
-        vk.vkDestroyInstance(self.instance, None)
+        if self.swapchain is not None: # Check for None before destroying
+            vk.vkDestroySwapchainKHR(self.device, self.swapchain, None)
+        if self.surface is not None: # Check for None before destroying
+            vk.vkDestroySurfaceKHR(self.instance, self.surface, None)
+        if self.device is not None: # Check for None before destroying
+            vk.vkDestroyDevice(self.device, None)
+        if self.instance is not None: # Check for None before destroying
+            vk.vkDestroyInstance(self.instance, None)
