@@ -22,7 +22,7 @@ class VulkanRenderer:
         self.create_command_pool() # New: create command pool
         self.create_command_buffers() # New: create command buffers
         self.create_sync_objects() # New: create synchronization objects
-
+        self.create_uniform_buffer()
 
         self.current_frame = 0
         self.graphics_queue = vk.vkGetDeviceQueue(self.device, self.graphics_queue_family_index, 0)
