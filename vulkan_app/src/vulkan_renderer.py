@@ -256,7 +256,7 @@ class VulkanRenderer:
         write_descriptor_sets = []
         write_descriptor_sets.append(vk.VkWriteDescriptorSet(
             sType=vk.VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            dstSet=descriptor_set,
+            dstSet=self.descriptor_sets[i],
             dstBinding=0,
             dstArrayElement=0,
             descriptorCount=1,
