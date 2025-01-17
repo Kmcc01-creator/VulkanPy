@@ -1,31 +1,22 @@
-import glfw # Import glfw
-from src.vulkan_renderer import VulkanRenderer
-from src.window_manager import WindowManager
-from src.input_handler import InputHandler
+import logging
+from src.config import Config
+from src.application import Application
+
+def setup_logging():
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 def main():
-    window_manager = WindowManager(800, 600, "Vulkan App")
-    if not glfw.init():
-        raise RuntimeError("Failed to initialize GLFW")
+    setup_logging()
+    logger = logging.getLogger(__name__)
 
-    glfw.window_hint(glfw.CLIENT_API, glfw.NO_API)
-    window = glfw.create_window(800, 600, "Vulkan App", None, None)
-
-    if not window:
-        glfw.terminate()
-        raise RuntimeError("Failed to create GLFW window")
-
-    renderer = VulkanRenderer(window)
-    input_handler = InputHandler(window)
-
-    while not glfw.window_should_close(window):
-        input_handler.process_input(renderer.camera_component) # Pass camera component to process_input
-        renderer.render()
-
-        glfw.poll_events()       # Example using GLFW
-
-    renderer.cleanup()
-    glfw.terminate()             # Example using GLFW
+    try:
+        config = Config.load_from_file('config.yaml')
+        app = Application(config)
+        app.run()
+    except Exception as e:
+        logger.exception(f"An error occurred: {e}")
+    finally:
+        logger.info("Application shutting down")
 
 if __name__ == "__main__":
     main()
