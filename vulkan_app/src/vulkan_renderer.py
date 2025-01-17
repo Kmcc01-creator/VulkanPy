@@ -64,24 +64,6 @@ class VulkanRenderer:
         from vulkan_engine.device import create_device as create_vk_device
         return create_vk_device(self.instance, self.enabled_layers)
 
-    def create_swapchain(self):
-        from vulkan_engine.swapchain import create_swapchain as create_vk_swapchain
-        swapchain, extent = create_vk_swapchain(self.instance, self.device, self.physical_device, self.surface, self.graphics_queue_family_index, self.graphics_queue_family_index) # Using graphics queue for present for now
-        return swapchain, extent
-
-    def create_render_pass(self):
-        from vulkan_engine.swapchain import create_render_pass as create_vk_render_pass
-        swapchain_image_format = vk.vkGetSwapchainImagesKHR(self.device, self.swapchain)[0].format # Getting format from first image
-        return create_vk_render_pass(self.device, swapchain_image_format)
-
-    def create_pipeline(self):
-        from vulkan_engine.pipeline import create_pipeline as create_vk_pipeline
-        return create_vk_pipeline(self.device, self.swapchain_extent, self.render_pass)
-
-    def create_framebuffers(self):
-        from vulkan_engine.swapchain import create_framebuffers as create_vk_framebuffers
-        return create_vk_framebuffers(self.device, self.swapchain, self.render_pass, self.swapchain_extent)
-
     def create_command_pool(self): # New function
         from vulkan_engine.command_buffer import create_command_pool as create_vk_command_pool
         self.command_pool = create_vk_command_pool(self.device, self.graphics_queue_family_index)
@@ -110,12 +92,7 @@ class VulkanRenderer:
         vk.vkDestroySwapchainKHR(self.device, self.swapchain, None)
 
         # Recreate swapchain and related resources
-        self.swapchain, self.swapchain_extent = self.create_swapchain()
-        self.create_uniform_buffers() # Recreate uniform buffers
-        self.create_descriptor_pool()
-        self.create_descriptor_sets()
-        self.framebuffers = self.create_framebuffers()
-        self.pipeline, self.pipeline_layout, self.descriptor_set_layout = self.create_pipeline() # Recreate pipeline, layout, and descriptor set layout
+        self.swapchain.recreate_swapchain() # Call recreate_swapchain on Swapchain object
 
         # Recreate command buffers
         self.create_command_buffers()
