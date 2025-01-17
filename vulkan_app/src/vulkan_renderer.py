@@ -218,13 +218,14 @@ class VulkanRenderer:
         except vk.VkError as e:
             raise Exception(f"Failed to end recording command buffer: {e}")
 
-    def create_uniform_buffers(self):
-        from vulkan_engine.buffer import UniformBuffer
-        self.uniform_buffers = []
-        for _ in range(len(self.framebuffers)): # Create a uniform buffer for each swapchain image
-            self.uniform_buffers.append(UniformBuffer(self, 4 * 4 * 4)) # mat4 size
-
     def create_descriptor_pool(self):
+        from vulkan_engine.descriptors import create_descriptor_pool as create_vk_descriptor_pool
+        self.descriptor_pool = create_vk_descriptor_pool(self.device, self.descriptor_set_layout)
+
+    def create_uniform_buffers(self):
+        from vulkan_engine.descriptors import create_uniform_buffers as create_vk_uniform_buffers
+        self.uniform_buffers = create_vk_uniform_buffers(self, len(self.swapchain_images))
+
         pool_sizes = []
         pool_sizes.append(vk.VkDescriptorPoolSize(type=vk.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, descriptorCount=1))
 
@@ -264,10 +265,9 @@ class VulkanRenderer:
             pBufferInfo=[buffer_info],
         ))
 
-        vk.vkUpdateDescriptorSets(self.device, len(write_descriptor_sets), write_descriptor_sets, 0, None)
 
 
-    def copy_buffer(self, src_buffer, dst_buffer, size):
+    def copy_buffer(self, src_buffer, dst_buffer, size): # Helper function remains unchanged
         allocate_info = vk.VkCommandBufferAllocateInfo(
             sType=vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
             level=vk.VK_COMMAND_BUFFER_LEVEL_PRIMARY,
