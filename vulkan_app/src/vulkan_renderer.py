@@ -52,46 +52,91 @@ class VulkanRenderer:
             raise
 
     def create_uniform_buffers(self):
-        buffer_size = ctypes.sizeof(UniformBufferObject)
-        self.uniform_buffers = []
+        camera_buffer_size = ctypes.sizeof(UniformBufferObject)
+        light_buffer_size = ctypes.sizeof(LightUBO)
+        self.camera_uniform_buffers = []
+        self.light_uniform_buffers = []
         for _ in range(len(self.vulkan_engine.swapchain.swapchain_images)):
-            buffer, memory = self.vulkan_engine.resource_manager.create_buffer(
-                buffer_size,
+            camera_buffer, camera_memory = self.vulkan_engine.resource_manager.create_buffer(
+                camera_buffer_size,
                 vk.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
             )
-            self.uniform_buffers.append((buffer, memory))
+            self.camera_uniform_buffers.append((camera_buffer, camera_memory))
 
-        light_buffer_size = ctypes.sizeof(LightUBO)
-        self.light_uniform_buffer, self.light_uniform_buffer_memory = self.vulkan_engine.resource_manager.create_buffer(
-            light_buffer_size,
-            vk.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-            vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-        )
+            light_buffer, light_memory = self.vulkan_engine.resource_manager.create_buffer(
+                light_buffer_size,
+                vk.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+            )
+            self.light_uniform_buffers.append((light_buffer, light_memory))
 
     def create_descriptor_sets(self):
-        # Update this method to include the new light uniform buffer
-        # You'll need to modify the descriptor set layout and allocation to include the new buffer
-        pass
+        descriptor_sets_layout = self.vulkan_engine.descriptor_set_layout
+        descriptor_pool = self.vulkan_engine.swapchain.descriptor_pool
+        
+        layouts = [descriptor_sets_layout.layout] * len(self.camera_uniform_buffers)
+        alloc_info = vk.VkDescriptorSetAllocateInfo(
+            sType=vk.VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+            descriptorPool=descriptor_pool,
+            descriptorSetCount=len(self.camera_uniform_buffers),
+            pSetLayouts=layouts,
+        )
+        self.descriptor_sets = vk.vkAllocateDescriptorSets(self.vulkan_engine.device, alloc_info)
+
+        for i, (camera_buffer, light_buffer) in enumerate(zip(self.camera_uniform_buffers, self.light_uniform_buffers)):
+            camera_buffer_info = vk.VkDescriptorBufferInfo(
+                buffer=camera_buffer[0],
+                offset=0,
+                range=ctypes.sizeof(UniformBufferObject),
+            )
+            light_buffer_info = vk.VkDescriptorBufferInfo(
+                buffer=light_buffer[0],
+                offset=0,
+                range=ctypes.sizeof(LightUBO),
+            )
+
+            write_descriptor_sets = [
+                vk.VkWriteDescriptorSet(
+                    sType=vk.VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                    dstSet=self.descriptor_sets[i],
+                    dstBinding=0,
+                    dstArrayElement=0,
+                    descriptorCount=1,
+                    descriptorType=vk.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                    pBufferInfo=[camera_buffer_info],
+                ),
+                vk.VkWriteDescriptorSet(
+                    sType=vk.VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                    dstSet=self.descriptor_sets[i],
+                    dstBinding=1,
+                    dstArrayElement=0,
+                    descriptorCount=1,
+                    descriptorType=vk.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                    pBufferInfo=[light_buffer_info],
+                )
+            ]
+
+            vk.vkUpdateDescriptorSets(self.vulkan_engine.device, len(write_descriptor_sets), write_descriptor_sets, 0, None)
 
     def update_uniform_buffer(self, current_image):
-        ubo = UniformBufferObject()
-        ubo.model = glm.mat4()
-        ubo.view = self.camera.get_view_matrix()
-        ubo.proj = self.camera.get_projection_matrix()
+        camera_ubo = UniformBufferObject()
+        camera_ubo.model = glm.mat4()
+        camera_ubo.view = self.camera_component.get_view_matrix()
+        camera_ubo.proj = self.camera_component.get_projection_matrix()
 
-        data = self.vulkan_engine.resource_manager.map_memory(self.uniform_buffers[current_image][1])
-        ctypes.memmove(data, ctypes.addressof(ubo), ctypes.sizeof(ubo))
-        self.vulkan_engine.resource_manager.unmap_memory(self.uniform_buffers[current_image][1])
+        camera_data = self.vulkan_engine.resource_manager.map_memory(self.camera_uniform_buffers[current_image][1])
+        ctypes.memmove(camera_data, ctypes.addressof(camera_ubo), ctypes.sizeof(camera_ubo))
+        self.vulkan_engine.resource_manager.unmap_memory(self.camera_uniform_buffers[current_image][1])
 
         light_ubo = LightUBO()
         light_ubo.lightPos = self.light.position
-        light_ubo.viewPos = self.camera.position
+        light_ubo.viewPos = self.camera_component.position
         light_ubo.lightColor = self.light.color
 
-        light_data = self.vulkan_engine.resource_manager.map_memory(self.light_uniform_buffer_memory)
+        light_data = self.vulkan_engine.resource_manager.map_memory(self.light_uniform_buffers[current_image][1])
         ctypes.memmove(light_data, ctypes.addressof(light_ubo), ctypes.sizeof(light_ubo))
-        self.vulkan_engine.resource_manager.unmap_memory(self.light_uniform_buffer_memory)
+        self.vulkan_engine.resource_manager.unmap_memory(self.light_uniform_buffers[current_image][1])
 
     def load_shaders(self) -> None:
         try:
