@@ -1,6 +1,6 @@
 import vulkan as vk
 
-def create_device(instance):
+def create_device(instance, enabled_layers):
     physical_devices = vk.vkEnumeratePhysicalDevices(instance)
     if not physical_devices:
         raise Exception("No Vulkan-capable GPUs found.")
@@ -45,7 +45,8 @@ def create_device(instance):
         ppEnabledExtensionNames=enabled_extensions, # Enabling the swapchain extension
         pEnabledFeatures=enabled_features,
         enabledLayerCount=len(enabled_layers),
-        ppEnabledLayerNames=enabled_layers
+        ppEnabledLayerNames=enabled_layers,
+
     )
 
     try:

@@ -48,6 +48,6 @@ def create_instance():
 
     try:
         instance = vk.vkCreateInstance(create_info, None)
-        return instance
+        return instance, enabled_layers
     except vk.VkError as e:
         raise Exception(f"Failed to create Vulkan instance: {e}")

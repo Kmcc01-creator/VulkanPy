@@ -6,7 +6,7 @@ class VulkanRenderer:
         self.window = window
 
         # Vulkan Instance creation
-        self.instance = self.create_instance()
+        self.instance, self.enabled_layers = self.create_instance()
 
         # Vulkan Device creation
         self.device, self.physical_device, self.graphics_queue_family_index = self.create_device()
@@ -26,7 +26,7 @@ class VulkanRenderer:
 
     def create_device(self):
         from vulkan_engine.device import create_device as create_vk_device
-        return create_vk_device(self.instance)
+        return create_vk_device(self.instance, self.enabled_layers)
 
     def create_swapchain(self):
         from vulkan_engine.swapchain import create_swapchain as create_vk_swapchain
@@ -64,15 +64,5 @@ class VulkanRenderer:
 
         vk.vkDestroySwapchainKHR(self.device, self.swapchain, None)
         vk.vkDestroySurfaceKHR(self.instance, self.surface, None)
-        vk.vkDestroyDevice(self.device, None)
-        vk.vkDestroyInstance(self.instance, None)
-        for framebuffer in self.framebuffers:
-            vk.vkDestroyFramebuffer(self.device, framebuffer, None)
-        vk.vkDestroyPipeline(self.device, self.pipeline, None)
-        vk.vkDestroyPipelineLayout(self.device, self.pipeline_layout, None)
-        vk.vkDestroyRenderPass(self.device, self.render_pass, None)
-        vk.vkDestroySwapchainKHR(self.device, self.swapchain, None)
-        vk.vkDestroySurfaceKHR(self.instance, self.surface, None)
-
         vk.vkDestroyDevice(self.device, None)
         vk.vkDestroyInstance(self.instance, None)
