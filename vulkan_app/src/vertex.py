@@ -42,3 +42,11 @@ class Vertex:
             )
         )
         return attributes
+
+    @staticmethod
+    def as_bytes(vertices):
+        buffer = bytearray()
+        for vertex in vertices:
+            buffer.extend(vertex.pos.astype(np.float32).tobytes())
+            buffer.extend(vertex.color.astype(np.float32).tobytes())
+        return buffer
