@@ -22,6 +22,7 @@ class VulkanRenderer:
         self.create_command_pool() # New: create command pool
         self.create_command_buffers() # New: create command buffers
         self.create_sync_objects() # New: create synchronization objects
+        self.create_vertex_buffer()
 
         self.current_frame = 0
         self.graphics_queue = vk.vkGetDeviceQueue(self.device, self.graphics_queue_family_index, 0)
@@ -170,13 +171,85 @@ class VulkanRenderer:
         )
         vk.vkCmdSetScissor(command_buffer, 0, 1, [scissor])
 
-        # vk.vkCmdDraw(command_buffer, 3, 1, 0, 0)  # Example: Draw 3 vertices
+        vk.vkCmdBindVertexBuffers(command_buffer, 0, 1, [self.vertex_buffer], [0])
+        vk.vkCmdDraw(command_buffer, 3, 1, 0, 0)
         vk.vkCmdEndRenderPass(command_buffer)
 
         try:
             vk.vkEndCommandBuffer(command_buffer)
         except vk.VkError as e:
             raise Exception(f"Failed to end recording command buffer: {e}")
+
+    def create_vertex_buffer(self):
+        from src.vertex import Vertex
+        vertices = [
+            Vertex([-0.5, -0.5, 0.0], [1.0, 0.0, 0.0]),
+            Vertex([0.5, -0.5, 0.0], [0.0, 1.0, 0.0]),
+            Vertex([0.0, 0.5, 0.0], [0.0, 0.0, 1.0]),
+        ]
+        buffer_size = len(vertices) * 2 * 4 * 3 # Number of vertices * 2 attributes (pos, color) * 4 bytes/float * 3 floats/attribute
+
+        staging_buffer, staging_buffer_memory = self.create_buffer(
+            buffer_size, vk.VK_BUFFER_USAGE_TRANSFER_SRC_BIT, vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+        )
+
+        data_ptr = vk.vkMapMemory(self.device, staging_buffer_memory, 0, buffer_size, 0)
+        for i, vertex in enumerate(vertices):
+            byte_offset = i * 2 * 4 * 3
+            vk.ffi.memmove(data_ptr + byte_offset, vertex.pos.buffer_info()[0], 3 * 4) # Copy position data
+            vk.ffi.memmove(data_ptr + byte_offset + 3 * 4, vertex.color.buffer_info()[0], 3 * 4) # Copy color data
+        vk.vkUnmapMemory(self.device, staging_buffer_memory)
+
+        self.vertex_buffer, self.vertex_buffer_memory = self.create_buffer(
+            buffer_size, vk.VK_BUFFER_USAGE_TRANSFER_DST_BIT | vk.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, vk.VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+        )
+
+        self.copy_buffer(staging_buffer, self.vertex_buffer, buffer_size)
+
+        vk.vkDestroyBuffer(self.device, staging_buffer, None)
+        vk.vkFreeMemory(self.device, staging_buffer_memory, None)
+
+    def create_buffer(self, size, usage, properties):
+        from vulkan_engine.buffer import create_buffer as create_vk_buffer
+        return create_vk_buffer(self.device, self.physical_device, size, usage, properties)
+
+    def copy_buffer(self, src_buffer, dst_buffer, size):
+        command_buffer = self.begin_single_time_commands()
+
+        copy_region = vk.VkBufferCopy(srcOffset=0, dstOffset=0, size=size)
+        vk.vkCmdCopyBuffer(command_buffer, src_buffer, dst_buffer, 1, [copy_region])
+
+        self.end_single_time_commands(command_buffer)
+
+    def begin_single_time_commands(self):
+        allocate_info = vk.VkCommandBufferAllocateInfo(
+            sType=vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+            level=vk.VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+            commandPool=self.command_pool,
+            commandBufferCount=1,
+        )
+        command_buffer = vk.vkAllocateCommandBuffers(self.device, allocate_info)[0]
+
+        begin_info = vk.VkCommandBufferBeginInfo(
+            sType=vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+            flags=vk.VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+        )
+        vk.vkBeginCommandBuffer(command_buffer, begin_info)
+
+        return command_buffer
+
+    def end_single_time_commands(self, command_buffer):
+        vk.vkEndCommandBuffer(command_buffer)
+
+        submit_info = vk.VkSubmitInfo(
+            sType=vk.VK_STRUCTURE_TYPE_SUBMIT_INFO,
+            commandBufferCount=1,
+            pCommandBuffers=[command_buffer],
+        )
+        vk.vkQueueSubmit(self.graphics_queue, 1, [submit_info], vk.VK_NULL_HANDLE)
+        vk.vkQueueWaitIdle(self.graphics_queue)
+
+        vk.vkFreeCommandBuffers(self.device, self.command_pool, 1, [command_buffer])
 
 
     def cleanup(self):
@@ -203,6 +276,8 @@ class VulkanRenderer:
         vk.vkDestroySwapchainKHR(self.device, self.swapchain, None)
         vk.vkDestroySurfaceKHR(self.instance, self.surface, None)
         vk.vkDestroyDevice(self.device, None)
+        vk.vkDestroyBuffer(self.device, self.vertex_buffer, None)
+        vk.vkFreeMemory(self.device, self.vertex_buffer_memory, None)
         vk.vkDestroyInstance(self.instance, None)
         for fence in self.in_flight_fences:
             vk.vkWaitForFences(self.device, 1, [fence], vk.VK_TRUE, 1000000000)
