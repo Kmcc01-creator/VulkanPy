@@ -1,6 +1,8 @@
+from dataclasses import dataclass # Import dataclass
 import vulkan as vk
 import numpy as np
 
+@dataclass
 class Vertex:
     def __init__(self, pos: np.ndarray, color: np.ndarray):
         self.pos = pos

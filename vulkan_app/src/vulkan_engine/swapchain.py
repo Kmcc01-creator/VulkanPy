@@ -243,7 +243,7 @@ class Swapchain:
             self.framebuffers.append(framebuffer)
 
     def create_uniform_buffers(self):
-        self.uniform_buffers = create_uniform_buffers(self.renderer, len(self.swapchain_images), self.resource_manager)
+        self.uniform_buffers = create_uniform_buffers(self.resource_manager, len(self.swapchain_images))
 
     def create_descriptor_pool(self):
         self.descriptor_pool = create_descriptor_pool(self.device, self.descriptor_set_layout, self.resource_manager)

@@ -2,10 +2,7 @@ import vulkan as vk
 import numpy as np
 from pyglm import mat4
 
-import vulkan as vk
 
-def create_buffer(device, physical_device, size, usage, properties, resource_manager): # Added resource_manager
-    buffer_create_info = vk.VkBufferCreateInfo(
         sType=vk.VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
         size=size,
         usage=usage,
@@ -37,21 +34,17 @@ def create_buffer(device, physical_device, size, usage, properties, resource_man
 
     resource_manager.add_resource(buffer, "buffer", resource_manager.destroy_buffer)
     resource_manager.add_resource(buffer_memory, "memory", resource_manager.free_memory)
-
-    return buffer, buffer_memory
-
-
 class UniformBuffer:
-    def __init__(self, renderer, size):
-        self.renderer = renderer
+    def __init__(self, resource_manager, size):
+        self.resource_manager = resource_manager
         self.size = size
         self.buffer, self.buffer_memory = self.create_buffer()
 
 
     def create_buffer(self):
-        return create_buffer(self.renderer.device, self.renderer.physical_device, self.size, vk.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, self.renderer.resource_manager)
+        return self.resource_manager.create_buffer(self.size, vk.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
 
     def update(self, data):
-        data_ptr = vk.vkMapMemory(self.renderer.device, self.buffer_memory, 0, self.size, 0)
+        data_ptr = vk.vkMapMemory(self.resource_manager.device, self.buffer_memory, 0, self.size, 0)
         vk.ffi.memmove(data_ptr, data.astype(np.float32).tobytes(), self.size)
-        vk.vkUnmapMemory(self.renderer.device, self.buffer_memory)
+        vk.vkUnmapMemory(self.resource_manager.device, self.buffer_memory)

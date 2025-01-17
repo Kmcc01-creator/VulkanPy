@@ -53,3 +53,57 @@ class ResourceManager:
 
     def destroy_command_pool(self, command_pool):
         vk.vkDestroyCommandPool(self.device, command_pool, None)
+
+    def create_buffer(self, size, usage, properties):
+        buffer_create_info = vk.VkBufferCreateInfo(
+            sType=vk.VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+            size=size,
+            usage=usage,
+            sharingMode=vk.VK_SHARING_MODE_EXCLUSIVE,
+        )
+
+        buffer = vk.vkCreateBuffer(self.device, buffer_create_info, None)
+
+        mem_requirements = vk.vkGetBufferMemoryRequirements(self.device, buffer)
+
+        mem_properties = vk.vkGetPhysicalDeviceMemoryProperties(self.renderer.physical_device)
+        memory_type_index = -1
+        for i in range(mem_properties.memoryTypeCount):
+            if (mem_requirements.memoryTypeBits & (1 << i)) and (mem_properties.memoryTypes[i].propertyFlags & properties) == properties:
+                memory_type_index = i
+                break
+
+        if memory_type_index == -1:
+            raise Exception("Failed to find suitable memory type for buffer.")
+
+        mem_alloc_info = vk.VkMemoryAllocateInfo(
+            sType=vk.VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+            allocationSize=mem_requirements.size,
+            memoryTypeIndex=memory_type_index,
+        )
+
+        buffer_memory = vk.vkAllocateMemory(self.device, mem_alloc_info, None)
+        vk.vkBindBufferMemory(self.device, buffer, buffer_memory, 0)
+
+        self.add_resource(buffer, "buffer", self.destroy_buffer)
+        self.add_resource(buffer_memory, "memory", self.free_memory)
+
+        return buffer, buffer_memory
+
+    def create_vertex_buffer(self, vertices):
+        buffer_size = Vertex.sizeof() * len(vertices)
+
+        staging_buffer, staging_buffer_memory = self.create_buffer(buffer_size, vk.VK_BUFFER_USAGE_TRANSFER_SRC_BIT, vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+
+        data_ptr = vk.vkMapMemory(self.device, staging_buffer_memory, 0, buffer_size, 0)
+        vk.ffi.memmove(data_ptr, Vertex.as_bytes(vertices), buffer_size)
+        vk.vkUnmapMemory(self.device, staging_buffer_memory)
+
+        vertex_buffer, vertex_buffer_memory = self.create_buffer(buffer_size, vk.VK_BUFFER_USAGE_TRANSFER_DST_BIT | vk.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, vk.VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+
+        self.renderer.copy_buffer(staging_buffer, vertex_buffer, buffer_size)
+
+        self.destroy_buffer(staging_buffer)
+        self.free_memory(staging_buffer_memory)
+
+        return vertex_buffer, vertex_buffer_memory, len(vertices)

@@ -20,6 +20,7 @@ class VulkanRenderer:
 
         mesh = Mesh(vertices=[], indices=[]) # Initialize empty mesh
         mesh.create_vertex_buffer(self, "vulkan_app/models/triangle.obj") # Load from file
+        mesh.create_vertex_buffer(self.resource_manager, "vulkan_app/models/triangle.obj") # Load from file, pass resource_manager
         self.world.add_component(entity, mesh) # Now with vertices
         self.world.add_component(entity, Material(color=np.array([1.0, 0.0, 0.0])))
 

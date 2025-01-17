@@ -64,8 +64,8 @@ def create_descriptor_sets(device, descriptor_pool, descriptor_set_layout, unifo
     return descriptor_sets
 
 
-def create_uniform_buffers(renderer, num_buffers, resource_manager):
+def create_uniform_buffers(resource_manager, num_buffers):
     uniform_buffers = []
     for _ in range(num_buffers):
-        uniform_buffers.append(UniformBuffer(renderer, 4 * 4 * 4))
+        uniform_buffers.append(UniformBuffer(resource_manager, 4 * 4 * 4))
     return uniform_buffers
