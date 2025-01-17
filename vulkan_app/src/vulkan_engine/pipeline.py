@@ -132,10 +132,14 @@ def create_pipeline(device, swapchain_extent, render_pass): # Added render_pass
         subpass=0,
     )
 
+    from src.vertex import Vertex
+    vertex_input_bindings = Vertex.get_binding_descriptions()
+    vertex_input_attributes = Vertex.get_attribute_descriptions()
+
     # ... (Create graphics pipeline) ...
     try:
         graphics_pipeline = vk.vkCreateGraphicsPipelines(device, None, 1, [pipeline_create_info], None)[0]
-        return graphics_pipeline
+        return graphics_pipeline, pipeline_layout # Returning the pipeline layout as well
     except vk.VkError as e:
         raise Exception(f"Failed to create graphics pipeline: {e}")
 

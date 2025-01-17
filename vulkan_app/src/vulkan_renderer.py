@@ -15,7 +15,10 @@ class VulkanRenderer:
         self.surface = glfw.create_window_surface(self.instance, window, None, None)
 
         # Swapchain creation (requires window surface)
-        self.swapchain = self.create_swapchain()
+        self.swapchain, self.swapchain_extent = self.create_swapchain() # Getting swapchain extent
+        self.render_pass = self.create_render_pass()
+        self.pipeline, self.pipeline_layout = self.create_pipeline() # Getting pipeline and layout
+        self.framebuffers = self.create_framebuffers()
 
     def create_instance(self):
         from vulkan_engine.instance import create_instance as create_vk_instance
