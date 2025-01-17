@@ -35,10 +35,11 @@ class Mesh:
 
         renderer.copy_buffer(staging_buffer, self.vertex_buffer, buffer_size)
 
-        vk.vkDestroyBuffer(renderer.device, staging_buffer, None)
-        vk.vkFreeMemory(renderer.device, staging_buffer_memory, None)
+        renderer.resource_manager.destroy_buffer(staging_buffer) # Use renderer's destroy_buffer via resource manager
+        renderer.resource_manager.free_memory(staging_buffer_memory) # Use renderer's free_memory via resource manager
 
         self.vertex_count = len(self.vertices)
+
 
 @dataclass
 class Material:
