@@ -220,6 +220,12 @@ class VulkanRenderer:
         vk.vkDestroyBuffer(self.device, staging_buffer, None)
         vk.vkFreeMemory(self.device, staging_buffer_memory, None)
 
+    def create_uniform_buffer(self):
+        buffer_size = 4 * 4 * 4 # mat4
+
+        self.uniform_buffer, self.uniform_buffer_memory = self.create_buffer(
+            buffer_size, vk.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+        )
 
     def create_buffer(self, size, usage, properties):
         from vulkan_engine.buffer import create_buffer as create_vk_buffer
