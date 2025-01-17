@@ -1,4 +1,5 @@
 import vulkan as vk
+import glfw
 
 def check_instance_extensions(layer_properties):
     available_extensions = vk.vkEnumerateInstanceExtensionProperties(None, None)
