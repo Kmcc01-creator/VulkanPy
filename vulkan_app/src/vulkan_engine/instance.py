@@ -19,14 +19,32 @@ def check_instance_extensions(layer_properties):
     return required_extensions
 
 def create_instance():
-    layer_properties = vk.vkEnumerateInstanceLayerProperties()
+    """Creates a Vulkan instance.
+
+    Raises:
+        Exception: If instance creation fails.
+
+    Returns:
+        Tuple[vk.Instance, List[str]]: The created Vulkan instance and a list of enabled layers.
+    """
+    try:
+        layer_properties = vk.vkEnumerateInstanceLayerProperties()
+    except vk.VkError as e:
+        raise Exception(f"Failed to enumerate instance layer properties: {e}")
+
     # Validation Layers
-    available_layers = vk.vkEnumerateInstanceLayerProperties()
+    try:
+        available_layers = vk.vkEnumerateInstanceLayerProperties()
+    except vk.VkError as e:
+        raise Exception(f"Failed to enumerate instance layer properties: {e}")
+
     validation_layers = ["VK_LAYER_KHRONOS_validation"]
     enabled_layers = [layer.layerName for layer in available_layers if layer.layerName in validation_layers]
 
-
-    enabled_extensions = check_instance_extensions(layer_properties)
+    try:
+        enabled_extensions = check_instance_extensions(layer_properties)
+    except Exception as e:  # check_instance_extensions raises its own exceptions
+        raise
 
     app_info = vk.VkApplicationInfo(
         sType=vk.VK_STRUCTURE_TYPE_APPLICATION_INFO,

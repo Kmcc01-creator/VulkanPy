@@ -1,15 +1,32 @@
 import vulkan as vk
 
 def create_device(instance, enabled_layers):
-    physical_devices = vk.vkEnumeratePhysicalDevices(instance)
+    """Creates a Vulkan device.
+
+    Args:
+        instance (vk.Instance): The Vulkan instance.
+        enabled_layers (List[str]): A list of enabled layers.
+
+    Raises:
+        Exception: If no suitable physical device is found or device creation fails.
+
+    Returns:
+        Tuple[vk.Device, vk.PhysicalDevice, int]: The created device, the selected physical device, and the graphics queue family index.
+    """
+    try:
+        physical_devices = vk.vkEnumeratePhysicalDevices(instance)
+    except vk.VkError as e:
+        raise Exception(f"Failed to enumerate physical devices: {e}")
     if not physical_devices:
         raise Exception("No Vulkan-capable GPUs found.")
 
-    # For simplicity, select the first suitable device.
-    # In a real application, you might want to add device selection logic here.
-    physical_device = physical_devices[0]
+    # TODO: Implement proper device selection based on features and capabilities.
+    physical_device = physical_devices[0]  # Weak point: Selecting the first device without checking capabilities.
 
-    queue_families = vk.vkGetPhysicalDeviceQueueFamilyProperties(physical_device)
+    try:
+        queue_families = vk.vkGetPhysicalDeviceQueueFamilyProperties(physical_device)
+    except vk.VkError as e:
+        raise Exception(f"Failed to get physical device queue family properties: {e}")
     graphics_queue_family_index = -1
     for i, queue_family in enumerate(queue_families):
         if queue_family.queueFlags & vk.VK_QUEUE_GRAPHICS_BIT:
