@@ -5,11 +5,13 @@ from vulkan_engine.command_buffer import create_command_pool, create_command_buf
 from vulkan_engine.synchronization import create_sync_objects
 from src.ecs.components import Mesh, Transform
 from src.ecs.world import World
+from vulkan_engine.vulkan_engine import VulkanEngine
+from src.shader_manager import ShaderManager
 
 logger = logging.getLogger(__name__)
 
 class RenderManager:
-    def __init__(self, vulkan_engine: 'VulkanEngine', shader_manager: 'ShaderManager') -> None:
+    def __init__(self, vulkan_engine: VulkanEngine, shader_manager: ShaderManager) -> None:
         self.vulkan_engine = vulkan_engine
         self.shader_manager = shader_manager
         self.device = vulkan_engine.device
