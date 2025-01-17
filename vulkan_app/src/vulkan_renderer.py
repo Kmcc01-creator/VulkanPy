@@ -38,6 +38,7 @@ class VulkanRenderer:
         self.surface = glfw.create_window_surface(self.instance, window, None, None)
 
         # Swapchain creation (requires window surface)
+        from vulkan_engine.swapchain import Swapchain
         self.swapchain = Swapchain(self)
         self.swapchain_extent = self.swapchain.extent # Access extent from Swapchain object
         self.render_pass = self.swapchain.render_pass # Access render_pass from Swapchain object
@@ -216,25 +217,6 @@ class VulkanRenderer:
         self.descriptor_pool = vk.vkCreateDescriptorPool(self.device, pool_create_info, None)
 
 
-    def create_descriptor_sets(self):
-        layout_info = vk.VkDescriptorSetAllocateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-            descriptorPool=self.descriptor_pool,
-            descriptorSetCount=1,
-            pSetLayouts=[self.descriptor_set_layout],
-        )
-        self.descriptor_sets = vk.vkAllocateDescriptorSets(self.device, layout_info)
-
-        buffer_info = vk.VkDescriptorBufferInfo(
-                buffer=uniform_buffer.buffer,
-            offset=0,
-            range=4 * 4 * 4, # Size of mat4
-        )
-
-        write_descriptor_sets = []
-    def create_descriptor_sets(self):
-        from vulkan_engine.descriptors import create_descriptor_sets as create_vk_descriptor_sets
-        self.descriptor_sets = create_vk_descriptor_sets(self.device, self.descriptor_pool, self.descriptor_set_layout, self.uniform_buffers)
 
         allocate_info = vk.VkCommandBufferAllocateInfo(
             sType=vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -248,11 +230,38 @@ class VulkanRenderer:
             sType=vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
             flags=vk.VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
         )
+    def copy_buffer(self, src_buffer, dst_buffer, size):
+        allocate_info = vk.VkCommandBufferAllocateInfo(
+            sType=vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+            level=vk.VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+            commandPool=self.command_pool,
+            commandBufferCount=1,
+        )
+        command_buffer = vk.vkAllocateCommandBuffers(self.device, allocate_info)[0]
+
+        begin_info = vk.VkCommandBufferBeginInfo(
+            sType=vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+            flags=vk.VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+        )
+        vk.vkBeginCommandBuffer(command_buffer, begin_info)
+
         copy_region = vk.VkBufferCopy(srcOffset=0, dstOffset=0, size=size)
         vk.vkCmdCopyBuffer(command_buffer, src_buffer, dst_buffer, 1, [copy_region])
 
+        vk.vkEndCommandBuffer(command_buffer)
 
-    def end_single_time_commands(self, command_buffer):
+        submit_info = vk.VkSubmitInfo(
+            sType=vk.VK_STRUCTURE_TYPE_SUBMIT_INFO,
+            commandBufferCount=1,
+            pCommandBuffers=[command_buffer],
+        )
+        vk.vkQueueSubmit(self.graphics_queue, 1, [submit_info], vk.VK_NULL_HANDLE)
+        vk.vkQueueWaitIdle(self.graphics_queue)
+
+        vk.vkFreeCommandBuffers(self.device, self.command_pool, 1, [command_buffer])
+
+
+    def end_single_time_commands(self, command_buffer): # This function is no longer needed
         vk.vkEndCommandBuffer(command_buffer)
 
         submit_info = vk.VkSubmitInfo(
