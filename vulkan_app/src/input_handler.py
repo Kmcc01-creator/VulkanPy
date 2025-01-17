@@ -3,7 +3,8 @@ class InputHandler:
         self.window = window
         # ... Input setup ...
 
-    def process_input(self):
+    def process_input(self, camera): # Add camera as argument
+        import glfw # Import glfw
         from pyglm import vec3
 
         camera_speed = 0.01 # Adjust camera speed as needed
