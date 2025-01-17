@@ -76,12 +76,12 @@ class VulkanRenderer:
         from vulkan_engine.command_buffer import create_command_buffers as create_vk_command_buffers
         self.command_buffers = create_vk_command_buffers(self.device, self.command_pool, len(self.framebuffers))
 
-    def create_sync_objects(self): # New function
+    def create_sync_objects(self):
         from vulkan_engine.synchronization import create_sync_objects as create_vk_sync_objects
-        self.image_available_semaphores, self.render_finished_semaphores, self.in_flight_fences = create_vk_sync_objects(self.device, len(self.framebuffers))
+        self.image_available_semaphores, self.render_finished_semaphores, self.in_flight_fences = create_vk_sync_objects(self.device, len(self.swapchain.swapchain_images), self.resource_manager)
 
     def recreate_swapchain(self):
-        width = int(glfw.get_framebuffer_size(self.window)[0])
+        vk.vkDeviceWaitIdle(self.device) # Wait for device to be idle
         height = int(glfw.get_framebuffer_size(self.window)[1])
         while width == 0 or height == 0: # Handle window minimization
             width = int(glfw.get_framebuffer_size(self.window)[0])
