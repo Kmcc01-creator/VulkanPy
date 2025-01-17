@@ -64,15 +64,35 @@ class VulkanRenderer:
 
 
     def render(self):
-        # ... Rendering commands ...
         # Acquire next image from swapchain
         # Record command buffer
         # Submit command buffer to graphics queue
         # Present image to screen
-        # Synchronization primitives (semaphores, fences) will be added here
-        # ... (Implementation for command buffer recording and submission) ...
 
     def cleanup(self):
+        for fence in self.in_flight_fences:
+            vk.vkWaitForFences(self.device, 1, [fence], vk.VK_TRUE, 1000000000) # Wait for fence before destroying it
+            vk.vkDestroyFence(self.device, fence, None)
+
+        for semaphore in self.image_available_semaphores:
+            vk.vkDestroySemaphore(self.device, semaphore, None)
+
+        for semaphore in self.render_finished_semaphores:
+            vk.vkDestroySemaphore(self.device, semaphore, None)
+
+        vk.vkDestroyCommandPool(self.device, self.command_pool, None)
+
+        vk.vkDestroyPipeline(self.device, self.pipeline, None)
+        vk.vkDestroyPipelineLayout(self.device, self.pipeline_layout, None)
+        vk.vkDestroyRenderPass(self.device, self.render_pass, None)
+
+        for framebuffer in self.framebuffers:
+            vk.vkDestroyFramebuffer(self.device, framebuffer, None)
+
+        vk.vkDestroySwapchainKHR(self.device, self.swapchain, None)
+        vk.vkDestroySurfaceKHR(self.instance, self.surface, None)
+        vk.vkDestroyDevice(self.device, None)
+        vk.vkDestroyInstance(self.instance, None)
         vk.vkDestroyPipeline(self.device, self.pipeline, None)
         vk.vkDestroyPipelineLayout(self.device, self.pipeline_layout, None)
         vk.vkDestroyRenderPass(self.device, self.render_pass, None)
