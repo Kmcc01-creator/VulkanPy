@@ -155,4 +155,6 @@ class VulkanRenderer:
 
     def cleanup(self) -> None:
         logger.info("Cleaning up VulkanRenderer")
+        self.shader_manager.cleanup()
+        self.render_manager.cleanup()
         self.vulkan_engine.cleanup()

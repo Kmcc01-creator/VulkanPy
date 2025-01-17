@@ -162,10 +162,10 @@ class RenderManager:
         vk.vkDeviceWaitIdle(self.device)
         
         for fence in self.in_flight_fences:
-            vk.vkDestroyFence(self.device, fence, None)
+            self.vulkan_engine.resource_manager.destroy_fence(fence)
         
         for semaphore in self.image_available_semaphores + self.render_finished_semaphores:
-            vk.vkDestroySemaphore(self.device, semaphore, None)
+            self.vulkan_engine.resource_manager.destroy_semaphore(semaphore)
         
-        vk.vkDestroyCommandPool(self.device, self.command_pool, None)
+        self.vulkan_engine.resource_manager.destroy_command_pool(self.command_pool)
 

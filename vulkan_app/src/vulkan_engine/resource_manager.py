@@ -112,17 +112,75 @@ class ResourceManager:
     def create_vertex_buffer(self, vertices):
         buffer_size = Vertex.sizeof() * len(vertices)
 
-        staging_buffer, staging_buffer_memory = self.create_buffer(buffer_size, vk.VK_BUFFER_USAGE_TRANSFER_SRC_BIT, vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+        staging_buffer, staging_buffer_memory = self.create_buffer(
+            buffer_size, 
+            vk.VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+            vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+        )
 
-        data_ptr = vk.vkMapMemory(self.device, staging_buffer_memory, 0, buffer_size, 0)
-        vk.ffi.memmove(data_ptr, Vertex.as_bytes(vertices), buffer_size)
-        vk.vkUnmapMemory(self.device, staging_buffer_memory)
+        try:
+            data_ptr = vk.vkMapMemory(self.device, staging_buffer_memory, 0, buffer_size, 0)
+            vk.ffi.memmove(data_ptr, Vertex.as_bytes(vertices), buffer_size)
+        finally:
+            vk.vkUnmapMemory(self.device, staging_buffer_memory)
 
-        vertex_buffer, vertex_buffer_memory = self.create_buffer(buffer_size, vk.VK_BUFFER_USAGE_TRANSFER_DST_BIT | vk.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, vk.VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+        vertex_buffer, vertex_buffer_memory = self.create_buffer(
+            buffer_size, 
+            vk.VK_BUFFER_USAGE_TRANSFER_DST_BIT | vk.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
+            vk.VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+        )
 
-        self.renderer.copy_buffer(staging_buffer, vertex_buffer, buffer_size)
+        self.copy_buffer(staging_buffer, vertex_buffer, buffer_size)
 
+        self.destroy_buffer(staging_buffer)
         self.free_memory(staging_buffer_memory)
-        self.destroy_buffer(self.device, staging_buffer, None) # Correctly destroy staging buffer
 
         return vertex_buffer, vertex_buffer_memory, len(vertices)
+
+    def copy_buffer(self, src_buffer, dst_buffer, size):
+        command_buffer = self.begin_single_time_commands()
+
+        copy_region = vk.VkBufferCopy(srcOffset=0, dstOffset=0, size=size)
+        vk.vkCmdCopyBuffer(command_buffer, src_buffer, dst_buffer, 1, [copy_region])
+
+        self.end_single_time_commands(command_buffer)
+
+    def begin_single_time_commands(self):
+        command_pool = self.create_command_pool()
+        allocate_info = vk.VkCommandBufferAllocateInfo(
+            sType=vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+            level=vk.VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+            commandPool=command_pool,
+            commandBufferCount=1,
+        )
+        command_buffer = vk.vkAllocateCommandBuffers(self.device, allocate_info)[0]
+
+        begin_info = vk.VkCommandBufferBeginInfo(
+            sType=vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+            flags=vk.VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+        )
+        vk.vkBeginCommandBuffer(command_buffer, begin_info)
+
+        return command_buffer
+
+    def end_single_time_commands(self, command_buffer):
+        vk.vkEndCommandBuffer(command_buffer)
+
+        submit_info = vk.VkSubmitInfo(
+            sType=vk.VK_STRUCTURE_TYPE_SUBMIT_INFO,
+            commandBufferCount=1,
+            pCommandBuffers=[command_buffer],
+        )
+
+        vk.vkQueueSubmit(self.renderer.graphics_queue, 1, [submit_info], vk.VK_NULL_HANDLE)
+        vk.vkQueueWaitIdle(self.renderer.graphics_queue)
+
+        vk.vkFreeCommandBuffers(self.device, self.command_pool, 1, [command_buffer])
+
+    def create_command_pool(self):
+        pool_info = vk.VkCommandPoolCreateInfo(
+            sType=vk.VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+            queueFamilyIndex=self.renderer.graphics_queue_family_index,
+            flags=vk.VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
+        )
+        return vk.vkCreateCommandPool(self.device, pool_info, None)

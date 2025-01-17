@@ -26,10 +26,14 @@ class InputHandler:
 
     def process_keyboard_input(self, camera: Any) -> None:
         camera_speed = 0.01
+        movement = vec3(0.0, 0.0, 0.0)
         for key, direction in self.key_mappings.items():
             if glfw.get_key(self.window, key) == glfw.PRESS:
-                camera.position += direction * camera_speed
-                logger.debug(f"Camera moved: {direction * camera_speed}")
+                movement += direction
+        if movement.length() > 0:
+            movement = movement.normalize() * camera_speed
+            camera.position += movement
+            logger.debug(f"Camera moved: {movement}")
 
     def process_mouse_input(self, camera: Any) -> None:
         x_pos, y_pos = glfw.get_cursor_pos(self.window)

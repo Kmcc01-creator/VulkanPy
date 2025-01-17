@@ -304,11 +304,12 @@ class Swapchain:
 
         # Destroy old swapchain and related resources
         for framebuffer in self.framebuffers:
-            vk.vkDestroyFramebuffer(self.device, framebuffer, None)
-        vk.vkDestroySwapchainKHR(self.device, self.swapchain, None)
+            self.resource_manager.destroy_framebuffer(framebuffer)
+        self.resource_manager.destroy_swapchain(self.swapchain)
 
         # Recreate swapchain and related resources
         self.create_swapchain()
+        self.create_image_views()
         self.create_render_pass()
         self.create_pipeline()
         self.create_framebuffers()
