@@ -52,6 +52,7 @@ class VulkanRenderer:
         # Record command buffer
         # Submit command buffer to graphics queue
         # Present image to screen
+        # Synchronization primitives (semaphores, fences) will be added here
 
     def cleanup(self):
         vk.vkDestroyPipeline(self.device, self.pipeline, None)

@@ -26,7 +26,15 @@ def create_device(instance):
         pQueuePriorities=[1.0],  # Queue priority (0.0 - 1.0)
     )
 
+    # Get supported extensions
+    supported_extensions = [
+        ext.extensionName
+        for ext in vk.vkEnumerateDeviceExtensionProperties(physical_device, None)
+    ]
     enabled_extensions = [vk.VK_KHR_SWAPCHAIN_EXTENSION_NAME] # Enabling the swapchain extension
+    # Check if required extensions are supported
+    if vk.VK_KHR_SWAPCHAIN_EXTENSION_NAME not in supported_extensions:
+        raise Exception("Swapchain extension not supported")
 
     enabled_features = vk.VkPhysicalDeviceFeatures() # Enable desired device features
     device_create_info = vk.VkDeviceCreateInfo(
