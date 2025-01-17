@@ -17,7 +17,9 @@ class VulkanRenderer:
         self.current_frame = 0
 
     def cleanup(self):
-        vk.vkDeviceWaitIdle(self.vulkan_engine.device) # Wait for device to be idle before destroying resources
+        vk.vkDeviceWaitIdle(self.vulkan_engine.device)
         self.render_manager.cleanup()
         self.swapchain.cleanup()
         self.vulkan_engine.cleanup()
+        glfw.destroy_window(self.window) # Destroy GLFW window
+        glfw.terminate()
