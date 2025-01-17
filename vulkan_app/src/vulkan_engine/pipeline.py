@@ -50,10 +50,15 @@ def create_pipeline(device, swapchain_extent, render_pass): # Added render_pass
         pPushConstantRanges=None, # Placeholder for push constant ranges
 
     )
+    from src.vertex import Vertex
+    vertex_input_bindings = Vertex.get_binding_descriptions()
+    vertex_input_attributes = Vertex.get_attribute_descriptions()
+
     pipeline_layout = vk.vkCreatePipelineLayout(device, pipeline_layout_create_info, None)
 
+
     # Vertex Input state
-    vertex_input_state = vk.VkPipelineVertexInputStateCreateInfo(
+    vertex_input_state = vk.VkPipelineVertexInputStateCreateInfo( # Using descriptions from Vertex class
         sType=vk.VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
         vertexBindingDescriptionCount=len(vertex_input_bindings),
         pVertexBindingDescriptions=vertex_input_bindings,

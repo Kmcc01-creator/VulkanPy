@@ -6,6 +6,19 @@ class Vertex:
         self.color = color
 
     def get_binding_descriptions():
+        bindings = []
+        # Position and color binding description
+        bindings.append(
+            vk.VkVertexInputBindingDescription(
+                binding=0,
+                stride=2 * 4 * 3,  # Position (vec3) + Color (vec3) = 6 floats * 4 bytes/float
+                inputRate=vk.VK_VERTEX_INPUT_RATE_VERTEX,
+            )
+        )
+        return bindings
+
+    def get_attribute_descriptions():
+        attributes = []
         binding_descriptions = []
         # Position binding description
         binding_descriptions.append(
@@ -17,10 +30,8 @@ class Vertex:
         )
         return binding_descriptions
 
-    def get_attribute_descriptions():
-        attribute_descriptions = []
         # Position attribute description
-        attribute_descriptions.append(
+        attributes.append(
             vk.VkVertexInputAttributeDescription(
                 location=0,
                 binding=0,
@@ -29,7 +40,7 @@ class Vertex:
             )
         )
         # Color attribute description
-        attribute_descriptions.append(
+        attributes.append(
             vk.VkVertexInputAttributeDescription(
                 location=1,
                 binding=0,
