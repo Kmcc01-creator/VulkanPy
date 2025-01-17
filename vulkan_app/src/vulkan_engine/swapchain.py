@@ -1,5 +1,41 @@
 import vulkan as vk
 
+def create_render_pass(device, swapchain_image_format):
+    color_attachment = vk.VkAttachmentDescription(
+        format=swapchain_image_format,
+        samples=vk.VK_SAMPLE_COUNT_1_BIT,
+        loadOp=vk.VK_ATTACHMENT_LOAD_OP_CLEAR,
+        storeOp=vk.VK_ATTACHMENT_STORE_OP_STORE,
+        stencilLoadOp=vk.VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        stencilStoreOp=vk.VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        initialLayout=vk.VK_IMAGE_LAYOUT_UNDEFINED,
+        finalLayout=vk.VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+    )
+
+    color_attachment_ref = vk.VkAttachmentReference(
+        attachment=0,
+        layout=vk.VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    )
+
+    subpass = vk.VkSubpassDescription(
+        pipelineBindPoint=vk.VK_PIPELINE_BIND_POINT_GRAPHICS,
+        colorAttachmentCount=1,
+        pColorAttachments=[color_attachment_ref],
+    )
+
+    render_pass_create_info = vk.VkRenderPassCreateInfo(
+        sType=vk.VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+        attachmentCount=1,
+        pAttachments=[color_attachment],
+        subpassCount=1,
+        pSubpasses=[subpass],
+    )
+
+    try:
+        return vk.vkCreateRenderPass(device, render_pass_create_info, None)
+    except vk.VkError as e:
+        raise Exception(f"Failed to create render pass: {e}")
+
 def choose_surface_format(physical_device, surface):
     formats = vk.vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface)
     if not formats:
