@@ -212,18 +212,4 @@ class ResourceManager:
 
         self.copy_buffer(staging_buffer.buffer, index_buffer.buffer, buffer_size)
         return index_buffer, staging_buffer.memory, len(indices)
-        create_info = vk.VkShaderModuleCreateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-            codeSize=len(code),
-            pCode=code
-        )
-        try:
-            module = vk.vkCreateShaderModule(self.device, create_info, None)
-            self.add_resource(module, "shader_module") # Track shader module for cleanup
-            return module
-        except vk.VkError as e:
-            logger.error(f"Failed to create shader module: {str(e)}")
-            raise
-
-    def destroy_shader_module(self, module):
         vk.vkDestroyShaderModule(self.device, module, None)
