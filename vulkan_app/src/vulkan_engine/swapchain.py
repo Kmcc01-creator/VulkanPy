@@ -86,52 +86,49 @@ class Swapchain:
 
 
     def create_swapchain(self):
-        # ... (Existing swapchain creation logic) ...
-        surface_capabilities = vk.vkGetPhysicalDeviceSurfaceCapabilitiesKHR(self.physical_device, self.surface)
-        surface_format = self.choose_surface_format()
-
-        # For simplicity, use FIFO present mode and mailbox image count.
-        # In a real application, you might want to add more sophisticated logic here.
-        present_mode = vk.VK_PRESENT_MODE_FIFO_KHR
-        image_count = surface_capabilities.minImageCount + 1
-
-        swapchain_create_info = vk.VkSwapchainCreateInfoKHR(
-            sType=vk.VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-            surface=self.surface,
-            minImageCount=image_count,
-            imageFormat=surface_format.format,
-            imageColorSpace=surface_format.colorSpace,
-            imageExtent=vk.VkExtent2D(
-                width=max(surface_capabilities.minImageExtent.width, min(surface_capabilities.maxImageExtent.width, surface_capabilities.currentExtent.width)),
-                height=max(surface_capabilities.minImageExtent.height, min(surface_capabilities.maxImageExtent.height, surface_capabilities.currentExtent.height))
-            ),
-            imageArrayLayers=1,
-            imageUsage=vk.VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-            imageSharingMode=vk.VK_SHARING_MODE_EXCLUSIVE,  # For single queue family
-            queueFamilyIndexCount=0,
-            pQueueFamilyIndices=None,
-            preTransform=surface_capabilities.currentTransform,
-            compositeAlpha=vk.VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-            presentMode=present_mode,
-            clipped=vk.VK_TRUE,
-            oldSwapchain=None,  # No existing swapchain to replace
-        )
-
-        if self.graphics_queue_family_index != self.present_queue_family_index:
-            swapchain_create_info.imageSharingMode = vk.VK_SHARING_MODE_CONCURRENT
-            swapchain_create_info.queueFamilyIndexCount = 2
-            p_queue_family_indices = [self.graphics_queue_family_index, self.present_queue_family_index]
-            swapchain_create_info.pQueueFamilyIndices = p_queue_family_indices
-
         try:
+            surface_capabilities = vk.vkGetPhysicalDeviceSurfaceCapabilitiesKHR(self.physical_device, self.surface)
+            surface_format = self.choose_surface_format()
+
+            present_mode = vk.VK_PRESENT_MODE_FIFO_KHR
+            image_count = min(surface_capabilities.maxImageCount, surface_capabilities.minImageCount + 1) if surface_capabilities.maxImageCount > 0 else surface_capabilities.minImageCount + 1
+
+            swapchain_create_info = vk.VkSwapchainCreateInfoKHR(
+                sType=vk.VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+                surface=self.surface,
+                minImageCount=image_count,
+                imageFormat=surface_format.format,
+                imageColorSpace=surface_format.colorSpace,
+                imageExtent=vk.VkExtent2D(
+                    width=max(surface_capabilities.minImageExtent.width, min(surface_capabilities.maxImageExtent.width, surface_capabilities.currentExtent.width)),
+                    height=max(surface_capabilities.minImageExtent.height, min(surface_capabilities.maxImageExtent.height, surface_capabilities.currentExtent.height))
+                ),
+                imageArrayLayers=1,
+                imageUsage=vk.VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                imageSharingMode=vk.VK_SHARING_MODE_EXCLUSIVE,
+                queueFamilyIndexCount=0,
+                pQueueFamilyIndices=None,
+                preTransform=surface_capabilities.currentTransform,
+                compositeAlpha=vk.VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+                presentMode=present_mode,
+                clipped=vk.VK_TRUE,
+                oldSwapchain=None,
+            )
+
+            if self.graphics_queue_family_index != self.present_queue_family_index:
+                swapchain_create_info.imageSharingMode = vk.VK_SHARING_MODE_CONCURRENT
+                swapchain_create_info.queueFamilyIndexCount = 2
+                p_queue_family_indices = [self.graphics_queue_family_index, self.present_queue_family_index]
+                swapchain_create_info.pQueueFamilyIndices = p_queue_family_indices
+
             self.swapchain = vk.vkCreateSwapchainKHR(self.device, swapchain_create_info, None)
-            self.resource_manager.add_resource(self.swapchain, "swapchain", self.resource_manager.destroy_swapchain)  # noqa: E501
+            self.resource_manager.add_resource(self.swapchain, "swapchain", self.resource_manager.destroy_swapchain)
             self.extent = surface_capabilities.currentExtent
-            swapchain_images = vk.vkGetSwapchainImagesKHR(self.device, self.swapchain)  # noqa: E501
-            self.swapchain_images = swapchain_images
+            self.swapchain_images = vk.vkGetSwapchainImagesKHR(self.device, self.swapchain)
             self.create_image_views()
         except vk.VkError as e:
-            raise Exception(f"Failed to create swapchain: {e}")
+            logger.error(f"Failed to create swapchain: {e}")
+            raise
 
 
     def recreate_swapchain(self):
@@ -159,9 +156,21 @@ class Swapchain:
         if not formats:
             raise Exception("No surface formats available.")
 
-        # For simplicity, select the first available format.
-        # In a real application, you might want to add format selection logic here.
+        for fmt in formats:
+            if fmt.format == vk.VK_FORMAT_B8G8R8A8_SRGB and fmt.colorSpace == vk.VK_COLOR_SPACE_SRGB_NONLINEAR_KHR:
+                return fmt
+
         return formats[0]
+
+    def choose_present_mode(self):
+        present_modes = vk.vkGetPhysicalDeviceSurfacePresentModesKHR(self.physical_device, self.surface)
+        
+        preferred_modes = [vk.VK_PRESENT_MODE_MAILBOX_KHR, vk.VK_PRESENT_MODE_IMMEDIATE_KHR]
+        for mode in preferred_modes:
+            if mode in present_modes:
+                return mode
+
+        return vk.VK_PRESENT_MODE_FIFO_KHR
 
     def create_image_views(self):
         for image in self.swapchain_images:

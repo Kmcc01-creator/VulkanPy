@@ -1,19 +1,33 @@
 import vulkan as vk
 from src.vertex import Vertex
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 class ResourceManager:
     def __init__(self, renderer):
         self.renderer = renderer
         self.device = renderer.device
         self.resources = []
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.cleanup()
+
     def add_resource(self, resource, resource_type, cleanup_function):
         self.resources.append((resource, resource_type, cleanup_function))
 
     def cleanup(self):
         for resource, resource_type, cleanup_function in reversed(self.resources):
-            if resource is not None:  # Check if resource is not None
-                cleanup_function(self.device, resource, None)
+            if resource is not None:
+                try:
+                    cleanup_function(self.device, resource, None)
+                except Exception as e:
+                    logger.error(f"Failed to clean up {resource_type}: {e}")
+        self.resources.clear()
 
     def destroy_swapchain(self, swapchain):
         vk.vkDestroySwapchainKHR(self.device, swapchain, None)
