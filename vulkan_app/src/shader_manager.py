@@ -34,19 +34,15 @@ class ShaderManager:
             raise
 
     def create_shader_module(self, code: bytes) -> vk.VkShaderModule:
-        create_info = vk.VkShaderModuleCreateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-            codeSize=len(code),
-            pCode=code
-        )
+        from vulkan_engine.shader_module import create_shader_module as create_vk_shader_module # Import new function
         try:
-            module = self.resource_manager.create_shader_module(code) # Use resource manager
+            module = create_vk_shader_module(self.device, code) # Call new function
             return module
         except vk.VkError as e:
             logger.error(f"Failed to create shader module: {str(e)}")
             raise
 
-    def get_shader(self, name: str) -> Dict[str, vk.VkShaderModule]:
+    def get_shader(self, name: str) -> Dict[str, vk.VkShaderModule]: # No changes here
         shader = self.shaders.get(name)
         if shader is None:
             logger.warning(f"Shader '{name}' not found")

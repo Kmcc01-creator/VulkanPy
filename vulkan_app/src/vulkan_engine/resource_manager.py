@@ -191,7 +191,27 @@ class ResourceManager:
         vk.vkQueueSubmit(self.renderer.graphics_queue, 1, [submit_info], vk.VK_NULL_HANDLE)
         vk.vkQueueWaitIdle(self.renderer.graphics_queue)
 
-    def create_shader_module(self, code):
+
+    def create_index_buffer(self, indices):
+        buffer_size = indices.nbytes
+
+        staging_buffer = self.create_buffer(
+            buffer_size,
+            vk.VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        )
+        staging_buffer.map_memory()
+        staging_buffer.copy_to_memory(indices)
+        staging_buffer.unmap_memory()
+
+        index_buffer = self.create_buffer(
+            buffer_size,
+            vk.VK_BUFFER_USAGE_TRANSFER_DST_BIT | vk.VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+            vk.VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        )
+
+        self.copy_buffer(staging_buffer.buffer, index_buffer.buffer, buffer_size)
+        return index_buffer, staging_buffer.memory, len(indices)
         create_info = vk.VkShaderModuleCreateInfo(
             sType=vk.VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
             codeSize=len(code),
