@@ -70,41 +70,44 @@ class ResourceManager:
         vk.vkDestroyCommandPool(self.device, command_pool, None)
 
     def create_buffer(self, size, usage, properties):
-        from src.vertex import Vertex # Import Vertex class
-        buffer_create_info = vk.VkBufferCreateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-            size=size,
-            usage=usage,
-            sharingMode=vk.VK_SHARING_MODE_EXCLUSIVE,
-        )
+        try:
+            buffer_create_info = vk.VkBufferCreateInfo(
+                sType=vk.VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+                size=size,
+                usage=usage,
+                sharingMode=vk.VK_SHARING_MODE_EXCLUSIVE,
+            )
 
-        buffer = vk.vkCreateBuffer(self.device, buffer_create_info, None)
+            buffer = vk.vkCreateBuffer(self.device, buffer_create_info, None)
+            mem_requirements = vk.vkGetBufferMemoryRequirements(self.device, buffer)
+            memory_type_index = self.find_memory_type(mem_requirements.memoryTypeBits, properties)
 
-        mem_requirements = vk.vkGetBufferMemoryRequirements(self.device, buffer)
+            mem_alloc_info = vk.VkMemoryAllocateInfo(
+                sType=vk.VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+                allocationSize=mem_requirements.size,
+                memoryTypeIndex=memory_type_index,
+            )
 
+            buffer_memory = vk.vkAllocateMemory(self.device, mem_alloc_info, None)
+            vk.vkBindBufferMemory(self.device, buffer, buffer_memory, 0)
+
+            self.add_resource(buffer, "buffer", self.destroy_buffer)
+            self.add_resource(buffer_memory, "memory", self.free_memory)
+
+            return buffer, buffer_memory
+        except vk.VkError as e:
+            logger.error(f"Failed to create buffer: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error during buffer creation: {e}")
+            raise
+
+    def find_memory_type(self, type_filter, properties):
         mem_properties = vk.vkGetPhysicalDeviceMemoryProperties(self.renderer.physical_device)
-        memory_type_index = -1
         for i in range(mem_properties.memoryTypeCount):
-            if (mem_requirements.memoryTypeBits & (1 << i)) and (mem_properties.memoryTypes[i].propertyFlags & properties) == properties:
-                memory_type_index = i
-                break
-
-        if memory_type_index == -1:
-            raise Exception("Failed to find suitable memory type for buffer.")
-
-        mem_alloc_info = vk.VkMemoryAllocateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-            allocationSize=mem_requirements.size,
-            memoryTypeIndex=memory_type_index,
-        )
-
-        buffer_memory = vk.vkAllocateMemory(self.device, mem_alloc_info, None)
-        vk.vkBindBufferMemory(self.device, buffer, buffer_memory, 0)
-
-        self.add_resource(buffer, "buffer", self.destroy_buffer)
-        self.add_resource(buffer_memory, "memory", self.free_memory)
-
-        return buffer, buffer_memory
+            if (type_filter & (1 << i)) and (mem_properties.memoryTypes[i].propertyFlags & properties) == properties:
+                return i
+        raise Exception("Failed to find suitable memory type for buffer.")
 
     def create_vertex_buffer(self, vertices):
         buffer_size = Vertex.sizeof() * len(vertices)

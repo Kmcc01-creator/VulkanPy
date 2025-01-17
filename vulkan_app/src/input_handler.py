@@ -12,14 +12,42 @@ class InputHandler:
             glfw.KEY_W: vec3(0.0, 0.0, 1.0),
             glfw.KEY_S: vec3(0.0, 0.0, -1.0),
             glfw.KEY_A: vec3(-1.0, 0.0, 0.0),
-            glfw.KEY_D: vec3(1.0, 0.0, 0.0)
+            glfw.KEY_D: vec3(1.0, 0.0, 0.0),
+            glfw.KEY_Q: vec3(0.0, 1.0, 0.0),
+            glfw.KEY_E: vec3(0.0, -1.0, 0.0)
         }
+        self.mouse_sensitivity = 0.1
+        self.last_mouse_pos = None
         logger.info("InputHandler initialized")
 
     def process_input(self, camera: Any) -> None:
+        self.process_keyboard_input(camera)
+        self.process_mouse_input(camera)
+
+    def process_keyboard_input(self, camera: Any) -> None:
         camera_speed = 0.01
-        pressed_keys = [key for key, direction in self.key_mappings.items() if glfw.get_key(self.window, key) == glfw.PRESS]
-        for key in pressed_keys:
-            direction = self.key_mappings[key]
-            camera.position += direction * camera_speed
-            logger.debug(f"Camera moved: {direction * camera_speed}")
+        for key, direction in self.key_mappings.items():
+            if glfw.get_key(self.window, key) == glfw.PRESS:
+                camera.position += direction * camera_speed
+                logger.debug(f"Camera moved: {direction * camera_speed}")
+
+    def process_mouse_input(self, camera: Any) -> None:
+        x_pos, y_pos = glfw.get_cursor_pos(self.window)
+        if self.last_mouse_pos is None:
+            self.last_mouse_pos = (x_pos, y_pos)
+            return
+
+        x_offset = x_pos - self.last_mouse_pos[0]
+        y_offset = self.last_mouse_pos[1] - y_pos
+        self.last_mouse_pos = (x_pos, y_pos)
+
+        x_offset *= self.mouse_sensitivity
+        y_offset *= self.mouse_sensitivity
+
+        camera.yaw += x_offset
+        camera.pitch += y_offset
+
+        camera.pitch = max(min(camera.pitch, 89.0), -89.0)
+
+        camera.update_camera_vectors()
+        logger.debug(f"Camera rotated: yaw={camera.yaw}, pitch={camera.pitch}")

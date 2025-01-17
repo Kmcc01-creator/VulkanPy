@@ -42,29 +42,40 @@ class VulkanRenderer:
             raise
 
     def init_world(self) -> None:
-        self.world = World()
-        self.render_system = RenderSystem(self)
-        self.camera_system = CameraSystem(self)
-        self.world.add_system(self.camera_system)
-        self.world.add_system(self.render_system)
+        try:
+            self.world = World()
+            self.render_system = RenderSystem(self)
+            self.camera_system = CameraSystem(self)
+            self.world.add_system(self.camera_system)
+            self.world.add_system(self.render_system)
 
-        # Camera
+            self.create_camera()
+            self.create_light()
+            self.create_objects()
+            self.create_custom_mesh()
+            
+            logger.info("World initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize world: {e}")
+            raise
+
+    def create_camera(self) -> None:
         camera_entity = self.world.create_entity()
         self.camera_component = Camera()
         self.world.add_component(camera_entity, self.camera_component)
         self.world.add_component(camera_entity, Transform(position=np.array([0.0, 0.0, -5.0]), rotation=np.array([0.0, 0.0, 0.0]), scale=np.array([1.0, 1.0, 1.0])))
 
-        # Light
+    def create_light(self) -> None:
         light_entity = self.world.create_entity()
         self.world.add_component(light_entity, Light(position=np.array([5.0, 5.0, 5.0]), color=np.array([1.0, 1.0, 1.0]), intensity=1.0))
         self.world.add_component(light_entity, Transform(position=np.array([5.0, 5.0, 5.0]), rotation=np.array([0.0, 0.0, 0.0]), scale=np.array([1.0, 1.0, 1.0])))
 
-        # Objects
+    def create_objects(self) -> None:
         self.create_mesh_entity(MeshType.SPHERE, np.array([0.0, 0.0, 0.0]))
         self.create_mesh_entity(MeshType.CUBE, np.array([2.0, 0.0, 0.0]))
         self.create_mesh_entity(MeshType.CYLINDER, np.array([-2.0, 0.0, 0.0]))
 
-        # Custom mesh
+    def create_custom_mesh(self) -> None:
         def custom_function(u: float, v: float) -> float:
             return np.sin(u) * np.cos(v)
         
