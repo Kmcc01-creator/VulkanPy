@@ -92,8 +92,10 @@ class VulkanRenderer:
 
         # Recreate swapchain and related resources
         self.swapchain, self.swapchain_extent = self.create_swapchain()
+        self.create_descriptor_pool()
+        self.create_descriptor_sets()
         self.framebuffers = self.create_framebuffers()
-        self.pipeline, self.pipeline_layout = self.create_pipeline() # Recreate pipeline as well
+        self.pipeline, self.pipeline_layout, self.descriptor_set_layout = self.create_pipeline() # Recreate pipeline as well
         self.create_vertex_buffer() # Recreate vertex buffer
 
 
