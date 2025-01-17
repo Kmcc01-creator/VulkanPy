@@ -29,10 +29,10 @@ class VulkanEngine:
 
     def initialize(self):
         try:
-            self.instance, self.enabled_layers = self.create_instance()
-            self.device, self.physical_device, self.graphics_queue_family_index = self.create_device()
-            self.surface = self.create_surface()
-            self.resource_manager = ResourceManager(self.device)
+            self.resource_manager = ResourceManager(self) # Initialize ResourceManager first
+            self.instance, self.enabled_layers = self.resource_manager.create_instance() # Create instance through ResourceManager
+            self.device, self.physical_device, self.graphics_queue_family_index = self.create_device() # Device creation remains here for now
+            self.surface = self.create_surface() # Surface creation remains here for now
             self.setup_queues()
             self.swapchain = Swapchain(self, self.resource_manager)
             self.create_descriptor_set_layout()
@@ -53,17 +53,7 @@ class VulkanEngine:
             logger.error(f"Failed to create window surface: {str(e)}")
             raise
 
-    def create_instance(self):
-        from vulkan_engine.instance import create_instance as create_vk_instance
-        try:
-            instance, enabled_layers = create_vk_instance()
-            logger.info("Vulkan instance created successfully")
-            return instance, enabled_layers
-        except vk.VkError as e:
-            logger.error(f"Failed to create Vulkan instance: {str(e)}")
-            raise
-
-    def create_device(self):
+    def create_device(self): # No changes here yet
         from vulkan_engine.device import create_device as create_vk_device
         return create_vk_device(self.instance, self.enabled_layers)
 

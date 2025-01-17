@@ -12,10 +12,15 @@ class ResourceManager:
         self.device = renderer.device
         self.physical_device = renderer.physical_device
         self.resources = {}
-        self.memory_allocator = MemoryAllocator(self.physical_device, self.device)
-        self.descriptor_set_layouts = {} # Add a dictionary to store descriptor set layouts
+        self.descriptor_set_layouts = {}
 
-    def create_pipeline_layout(self, create_info): # Modified to use create_descriptor_set_layout
+    def create_instance(self): # New method to create Vulkan instance
+        from vulkan_engine.instance import create_instance as create_vk_instance
+        instance, enabled_layers = create_vk_instance()
+        self.add_resource(instance, "instance") # Add instance to managed resources
+        return instance, enabled_layers
+
+    def create_pipeline_layout(self, create_info):
         pipeline_layout = vk.vkCreatePipelineLayout(self.device, create_info, None)
         self.add_resource(pipeline_layout, "pipeline_layout")
         return pipeline_layout
