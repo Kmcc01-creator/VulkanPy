@@ -1,8 +1,9 @@
 import vulkan as vk
 from vulkan_engine.buffer import UniformBuffer
 
-class DescriptorSetLayout:
-    def __init__(self, device):
+class DescriptorSetLayout: # DescriptorSetLayout will now be created and managed by ResourceManager
+    def __init__(self, layout):
+        self.layout = layout
         bindings = [
             vk.VkDescriptorSetLayoutBinding(
                 binding=0,
@@ -22,12 +23,7 @@ class DescriptorSetLayout:
             bindingCount=len(bindings),
             pBindings=bindings,
         )
-        self.layout = vk.vkCreateDescriptorSetLayout(device, layout_info, None)
-
-    def destroy(self, device):
-        vk.vkDestroyDescriptorSetLayout(device, self.layout, None)
-
-def create_descriptor_pool(device, swapchain_images_count, resource_manager):
+def create_descriptor_pool(device, swapchain_images_count, resource_manager): # Removed DescriptorSetLayout creation from here
     pool_sizes = [
         vk.VkDescriptorPoolSize(type=vk.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, descriptorCount=swapchain_images_count * 2)
     ]

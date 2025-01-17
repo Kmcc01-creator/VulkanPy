@@ -62,7 +62,7 @@ def create_pipeline(device, swapchain_extent, render_pass, resource_manager): # 
         pBindings=bindings,
     )
 
-    descriptor_set_layout = DescriptorSetLayout(device, bindings, resource_manager) # Pass resource_manager to DescriptorSetLayout
+    descriptor_set_layout = resource_manager.create_descriptor_set_layout(bindings) # Use resource_manager to create descriptor set layout
 
     # ... (Pipeline layout create info) ...
     push_constant_range = vk.VkPushConstantRange(

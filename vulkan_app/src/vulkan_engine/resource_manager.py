@@ -13,10 +13,9 @@ class ResourceManager:
         self.physical_device = renderer.physical_device
         self.resources = {}
         self.memory_allocator = MemoryAllocator(self.physical_device, self.device)
-        self.resource_cache = {}
-        self.shader_modules = {}
+        self.descriptor_set_layouts = {} # Add a dictionary to store descriptor set layouts
 
-    def create_pipeline_layout(self, create_info):
+    def create_pipeline_layout(self, create_info): # Modified to use create_descriptor_set_layout
         pipeline_layout = vk.vkCreatePipelineLayout(self.device, create_info, None)
         self.add_resource(pipeline_layout, "pipeline_layout")
         return pipeline_layout
@@ -27,8 +26,22 @@ class ResourceManager:
         self.add_resource(graphics_pipeline, "graphics_pipeline")
         return graphics_pipeline
 
+
+    def create_descriptor_set_layout(self, bindings): # New method to create descriptor set layout
+        layout_info = vk.VkDescriptorSetLayoutCreateInfo(
+            sType=vk.VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+            bindingCount=len(bindings),
+            pBindings=bindings,
+        )
+        layout = vk.vkCreateDescriptorSetLayout(self.device, layout_info, None)
+        self.add_resource(layout, "descriptor_set_layout")
+        layout_key = tuple(b.binding for b in bindings) # Use bindings as key
+        self.descriptor_set_layouts[layout_key] = layout # Store layout in dictionary
+        return layout # Return DescriptorSetLayout object
+
+
     def create_swapchain(self, create_info):
-        swapchain = vk.vkCreateSwapchainKHR(self.device, create_info, None)
+        swapchain = vk.vkCreateSwapchainKHR(self.device, create_info, None) # No changes here
         self.add_resource(swapchain, "swapchain")
         return swapchain
 
