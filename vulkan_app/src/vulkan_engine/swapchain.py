@@ -90,14 +90,30 @@ def create_swapchain(instance, device, physical_device, surface, graphics_queue_
 
 
 class Swapchain:
-    def __init__(self, renderer):
+    def __init__(self, renderer, resource_manager):
+        self.renderer = renderer
+        self.resource_manager = resource_manager
         self.renderer = renderer
         self.instance = renderer.instance
         self.device = renderer.device
         self.physical_device = renderer.physical_device
         self.surface = renderer.surface
         self.graphics_queue_family_index = renderer.graphics_queue_family_index
-        self.present_queue_family_index = renderer.graphics_queue_family_index # Using graphics queue for present for now
+        self.graphics_queue_family_index = renderer.graphics_queue_family_index
+        self.present_queue_family_index = renderer.present_queue_family_index # Fixed: Use actual present queue
+
+        self.swapchain = None
+        self.swapchain_images = []
+        self.image_views = []
+        self.extent = None
+        self.render_pass = None
+        self.pipeline = None
+        self.pipeline_layout = None
+        self.framebuffers = []
+        self.uniform_buffers = []
+        self.descriptor_pool = None
+        self.descriptor_sets = []
+        self.descriptor_set_layout = None
 
         self.create_swapchain()
         self.create_render_pass()
@@ -143,7 +159,10 @@ class Swapchain:
 
         try:
             self.swapchain = vk.vkCreateSwapchainKHR(self.device, swapchain_create_info, None)
+            self.resource_manager.add_resource(self.swapchain, "swapchain", self.resource_manager.destroy_swapchain)
             self.extent = surface_capabilities.currentExtent
+            self.swapchain_images = vk.vkGetSwapchainImagesKHR(self.device, self.swapchain)
+            self.create_image_views()
         except vk.VkError as e:
             raise Exception(f"Failed to create swapchain: {e}")
 
@@ -155,6 +174,26 @@ class Swapchain:
         # For simplicity, select the first available format.
         # In a real application, you might want to add format selection logic here.
         return formats[0]
+
+    def create_image_views(self):
+        for image in self.swapchain_images:
+            image_view_create_info = vk.VkImageViewCreateInfo(
+                sType=vk.VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+                image=image,
+                viewType=vk.VK_IMAGE_VIEW_TYPE_2D,
+                format=self.choose_surface_format().format,
+                components=vk.VkComponentMapping(),  # Default component mapping
+                subresourceRange=vk.VkImageSubresourceRange(
+                    aspectMask=vk.VK_IMAGE_ASPECT_COLOR_BIT,
+                    baseMipLevel=0,
+                    levelCount=1,
+                    baseArrayLayer=0,
+                    layerCount=1,
+                )
+            )
+            image_view = vk.vkCreateImageView(self.device, image_view_create_info, None)
+            self.resource_manager.add_resource(image_view, "image_view", self.resource_manager.destroy_image_view)
+            self.image_views.append(image_view)
 
     def create_render_pass(self):
         color_attachment = vk.VkAttachmentDescription(
@@ -189,11 +228,16 @@ class Swapchain:
 
         try:
             self.render_pass = vk.vkCreateRenderPass(self.device, render_pass_create_info, None)
+            self.resource_manager.add_resource(self.render_pass, "render_pass", self.resource_manager.destroy_render_pass)
         except vk.VkError as e:
             raise Exception(f"Failed to create render pass: {e}")
 
     def create_pipeline(self):
-        self.pipeline, self.pipeline_layout, self.descriptor_set_layout = create_pipeline(self.device, self.extent, self.render_pass) # Store descriptor_set_layout
+        self.pipeline, self.pipeline_layout, self.descriptor_set_layout = create_pipeline(self.device, self.extent, self.render_pass, self.resource_manager)
+        self.resource_manager.add_resource(self.pipeline, "pipeline", self.resource_manager.destroy_pipeline)
+        self.resource_manager.add_resource(self.pipeline_layout, "pipeline_layout", self.resource_manager.destroy_pipeline_layout)
+        self.resource_manager.add_resource(self.descriptor_set_layout.layout, "descriptor_set_layout", self.resource_manager.destroy_descriptor_set_layout)
+
 
     def create_framebuffers(self):
         swapchain_images = vk.vkGetSwapchainImagesKHR(self.device, self.swapchain)
@@ -227,19 +271,21 @@ class Swapchain:
             )
 
             framebuffer = vk.vkCreateFramebuffer(self.device, framebuffer_create_info, None)
+            self.resource_manager.add_resource(framebuffer, "framebuffer", self.resource_manager.destroy_framebuffer)
             self.framebuffers.append(framebuffer)
 
-
     def create_uniform_buffers(self):
-        self.uniform_buffers = create_uniform_buffers(self.renderer, len(vk.vkGetSwapchainImagesKHR(self.device, self.swapchain)))
+        self.uniform_buffers = create_uniform_buffers(self.renderer, len(self.swapchain_images), self.resource_manager)
 
     def create_descriptor_pool(self):
-        self.descriptor_pool = create_descriptor_pool(self.device, self.descriptor_set_layout)
+        self.descriptor_pool = create_descriptor_pool(self.device, self.descriptor_set_layout, self.resource_manager)
+        self.resource_manager.add_resource(self.descriptor_pool, "descriptor_pool", self.resource_manager.destroy_descriptor_pool)
 
     def create_descriptor_sets(self):
         self.descriptor_sets = create_descriptor_sets(self.device, self.descriptor_pool, self.descriptor_set_layout, self.uniform_buffers)
 
-def create_framebuffers(device, swapchain, render_pass, extent): # This function is no longer needed
+
+def create_framebuffers(device, swapchain, render_pass, extent):
     swapchain_images = vk.vkGetSwapchainImagesKHR(device, swapchain)
     swapchain_images = vk.vkGetSwapchainImagesKHR(device, swapchain)
     framebuffers = []
@@ -283,18 +329,14 @@ def create_framebuffers(device, swapchain, render_pass, extent): # This function
 
         # Recreate swapchain and related resources
         self.create_swapchain()
+        self.create_render_pass()
+        self.create_pipeline()
+        self.create_framebuffers()
         self.create_uniform_buffers()
         self.create_descriptor_pool()
         self.create_descriptor_sets()
-        self.create_framebuffers()
-        self.create_pipeline() # Recreate pipeline as well
 
-        # Recreate command buffers
         self.renderer.create_command_buffers()
 
     def cleanup(self):
-        for framebuffer in self.framebuffers:
-            vk.vkDestroyFramebuffer(self.device, framebuffer, None)
-        vk.vkDestroySwapchainKHR(self.device, self.swapchain, None)
-
-        # Destroy other resources as needed
+        pass # Resources are now managed by ResourceManager

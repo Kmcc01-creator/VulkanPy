@@ -39,7 +39,8 @@ class VulkanRenderer:
 
         # Swapchain creation (requires window surface)
         from vulkan_engine.swapchain import Swapchain
-        self.swapchain = Swapchain(self)
+        self.resource_manager = ResourceManager(self)
+        self.swapchain = Swapchain(self, self.resource_manager)
         self.swapchain_extent = self.swapchain.extent # Access extent from Swapchain object
         self.render_pass = self.swapchain.render_pass # Access render_pass from Swapchain object
         self.pipeline = self.swapchain.pipeline # Access pipeline from Swapchain object
@@ -89,16 +90,11 @@ class VulkanRenderer:
 
         vk.vkDeviceWaitIdle(self.device)
 
-        # Destroy old swapchain and related resources
-        for framebuffer in self.framebuffers:
-            vk.vkDestroyFramebuffer(self.device, framebuffer, None)
-        vk.vkDestroySwapchainKHR(self.device, self.swapchain, None)
-
-        # Recreate swapchain and related resources
-        self.swapchain.recreate_swapchain() # Call recreate_swapchain on Swapchain object
+        self.swapchain.recreate_swapchain()
 
         # Recreate command buffers
         self.create_command_buffers()
+
 
     def render(self):
         try:
@@ -307,15 +303,12 @@ class VulkanRenderer:
         if self.render_pass is not None: # Check for None before destroying
             vk.vkDestroyRenderPass(self.device, self.render_pass, None)
 
-        for framebuffer in self.framebuffers or []: # Handle potential empty list
-            vk.vkDestroyFramebuffer(self.device, framebuffer, None)
 
-        vk.vkDestroySwapchainKHR(self.device, self.swapchain, None)
-        if self.swapchain is not None: # Check for None before destroying
-            vk.vkDestroySwapchainKHR(self.device, self.swapchain, None)
-        if self.surface is not None: # Check for None before destroying
+        self.resource_manager.cleanup()
+
+        if self.surface is not None:
             vk.vkDestroySurfaceKHR(self.instance, self.surface, None)
-        if self.device is not None: # Check for None before destroying
+        if self.device is not None:
             vk.vkDestroyDevice(self.device, None)
-        if self.instance is not None: # Check for None before destroying
+        if self.instance is not None:
             vk.vkDestroyInstance(self.instance, None)

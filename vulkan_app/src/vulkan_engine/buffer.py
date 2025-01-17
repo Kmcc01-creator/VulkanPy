@@ -4,7 +4,7 @@ from pyglm import mat4
 
 import vulkan as vk
 
-def create_buffer(device, physical_device, size, usage, properties):
+def create_buffer(device, physical_device, size, usage, properties, resource_manager): # Added resource_manager
     buffer_create_info = vk.VkBufferCreateInfo(
         sType=vk.VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
         size=size,
@@ -35,6 +35,9 @@ def create_buffer(device, physical_device, size, usage, properties):
     buffer_memory = vk.vkAllocateMemory(device, mem_alloc_info, None)
     vk.vkBindBufferMemory(device, buffer, buffer_memory, 0)
 
+    resource_manager.add_resource(buffer, "buffer", resource_manager.destroy_buffer)
+    resource_manager.add_resource(buffer_memory, "memory", resource_manager.free_memory)
+
     return buffer, buffer_memory
 
 
@@ -44,10 +47,11 @@ class UniformBuffer:
         self.size = size
         self.buffer, self.buffer_memory = self.create_buffer()
 
+
     def create_buffer(self):
-        return create_buffer(self.renderer.device, self.renderer.physical_device, self.size, vk.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+        return create_buffer(self.renderer.device, self.renderer.physical_device, self.size, vk.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, self.renderer.resource_manager)
 
     def update(self, data):
         data_ptr = vk.vkMapMemory(self.renderer.device, self.buffer_memory, 0, self.size, 0)
-        vk.ffi.memmove(data_ptr, data.astype(np.float32).tobytes(), self.size) # Assuming data is a numpy array
+        vk.ffi.memmove(data_ptr, data.astype(np.float32).tobytes(), self.size)
         vk.vkUnmapMemory(self.renderer.device, self.buffer_memory)

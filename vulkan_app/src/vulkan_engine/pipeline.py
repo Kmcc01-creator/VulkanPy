@@ -16,7 +16,7 @@ def create_shader_module(device, shader_code):
 from vulkan_engine.descriptors import DescriptorSetLayout
 from src.vertex import Vertex
 
-def create_pipeline(device, swapchain_extent, render_pass): # Added render_pass
+def create_pipeline(device, swapchain_extent, render_pass, resource_manager):
     # ... (Load shader code from shader.vert and shader.frag) ...
     with open("vulkan_app/shaders/shader.vert", "rb") as f:
         vert_shader_code = f.read()
@@ -62,7 +62,8 @@ def create_pipeline(device, swapchain_extent, render_pass): # Added render_pass
         pBindings=bindings,
     )
 
-    descriptor_set_layout = DescriptorSetLayout(device, bindings) # Create DescriptorSetLayout object
+    descriptor_set_layout = DescriptorSetLayout(device, bindings)
+    resource_manager.add_resource(descriptor_set_layout.layout, "descriptor_set_layout", resource_manager.destroy_descriptor_set_layout)
 
     # ... (Pipeline layout create info) ...
     push_constant_range = vk.VkPushConstantRange(

@@ -16,7 +16,7 @@ class DescriptorSetLayout:
         vk.vkDestroyDescriptorSetLayout(device, self.layout, None)
 
 
-def create_descriptor_pool(device, descriptor_set_layout):
+def create_descriptor_pool(device, descriptor_set_layout, resource_manager):
     pool_sizes = []
     pool_sizes.append(vk.VkDescriptorPoolSize(type=vk.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, descriptorCount=1))
 
@@ -27,7 +27,9 @@ def create_descriptor_pool(device, descriptor_set_layout):
         pPoolSizes=pool_sizes
     )
 
-    return vk.vkCreateDescriptorPool(device, pool_create_info, None)
+    descriptor_pool = vk.vkCreateDescriptorPool(device, pool_create_info, None)
+    resource_manager.add_resource(descriptor_pool, "descriptor_pool", resource_manager.destroy_descriptor_pool)
+    return descriptor_pool
 
 
 def create_descriptor_sets(device, descriptor_pool, descriptor_set_layout, uniform_buffers):
@@ -62,8 +64,8 @@ def create_descriptor_sets(device, descriptor_pool, descriptor_set_layout, unifo
     return descriptor_sets
 
 
-def create_uniform_buffers(renderer, num_buffers):
+def create_uniform_buffers(renderer, num_buffers, resource_manager):
     uniform_buffers = []
     for _ in range(num_buffers):
-        uniform_buffers.append(UniformBuffer(renderer, 4 * 4 * 4)) # mat4 size
+        uniform_buffers.append(UniformBuffer(renderer, 4 * 4 * 4))
     return uniform_buffers
