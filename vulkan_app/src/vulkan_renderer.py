@@ -68,8 +68,32 @@ class VulkanRenderer:
         # Record command buffer
         # Submit command buffer to graphics queue
         # Present image to screen
+        pass  # Placeholder for rendering logic
 
     def cleanup(self):
+        for fence in self.in_flight_fences:
+            vk.vkWaitForFences(self.device, 1, [fence], vk.VK_TRUE, 1000000000)
+            vk.vkDestroyFence(self.device, fence, None)
+
+        for semaphore in self.image_available_semaphores:
+            vk.vkDestroySemaphore(self.device, semaphore, None)
+
+        for semaphore in self.render_finished_semaphores:
+            vk.vkDestroySemaphore(self.device, semaphore, None)
+
+        vk.vkDestroyCommandPool(self.device, self.command_pool, None)
+
+        vk.vkDestroyPipeline(self.device, self.pipeline, None)
+        vk.vkDestroyPipelineLayout(self.device, self.pipeline_layout, None)
+        vk.vkDestroyRenderPass(self.device, self.render_pass, None)
+
+        for framebuffer in self.framebuffers:
+            vk.vkDestroyFramebuffer(self.device, framebuffer, None)
+
+        vk.vkDestroySwapchainKHR(self.device, self.swapchain, None)
+        vk.vkDestroySurfaceKHR(self.instance, self.surface, None)
+        vk.vkDestroyDevice(self.device, None)
+        vk.vkDestroyInstance(self.instance, None)
         for fence in self.in_flight_fences:
             vk.vkWaitForFences(self.device, 1, [fence], vk.VK_TRUE, 1000000000) # Wait for fence before destroying it
             vk.vkDestroyFence(self.device, fence, None)
