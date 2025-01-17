@@ -33,33 +33,37 @@ class RenderManager:
 
     def render(self, world):
         try:
-            image_index = vk.vkAcquireNextImageKHR(
-                self.device,
-                self.vulkan_engine.swapchain.swapchain,
-                vk.UINT64_MAX,
-                self.image_available_semaphores[self.current_frame],
-                vk.VK_NULL_HANDLE
-            )
+            image_index = self.acquire_next_image()
+            self.wait_for_fences()
+            self.reset_fences()
+            self.reset_command_buffer()
+            self.record_command_buffer(self.command_buffers[self.current_frame], image_index, world)
+            self.submit_command_buffer(image_index)
+            self.present_image(image_index)
         except vk.VkErrorOutOfDateKHR:
             self.vulkan_engine.recreate_swapchain()
-            return
         except vk.VkError as e:
-            raise RuntimeError(f"Failed to acquire swap chain image: {str(e)}")
+            raise RuntimeError(f"Render failed: {str(e)}")
 
-        try:
-            vk.vkWaitForFences(self.device, 1, [self.in_flight_fences[self.current_frame]], vk.VK_TRUE, vk.UINT64_MAX)
-        except vk.VkError as e:
-            raise RuntimeError(f"Failed to wait for fence: {str(e)}")
+        self.current_frame = (self.current_frame + 1) % len(self.vulkan_engine.swapchain.swapchain_images)
 
-        try:
-            vk.vkResetFences(self.device, 1, [self.in_flight_fences[self.current_frame]])
-        except vk.VkError as e:
-            raise RuntimeError(f"Failed to reset fence: {str(e)}")
+    def acquire_next_image(self):
+        return vk.vkAcquireNextImageKHR(
+            self.device,
+            self.vulkan_engine.swapchain.swapchain,
+            vk.UINT64_MAX,
+            self.image_available_semaphores[self.current_frame],
+            vk.VK_NULL_HANDLE
+        )
 
-        try:
-            vk.vkResetCommandBuffer(self.command_buffers[self.current_frame], 0)
-        except vk.VkError as e:
-            raise RuntimeError(f"Failed to reset command buffer: {str(e)}")
+    def wait_for_fences(self):
+        vk.vkWaitForFences(self.device, 1, [self.in_flight_fences[self.current_frame]], vk.VK_TRUE, vk.UINT64_MAX)
+
+    def reset_fences(self):
+        vk.vkResetFences(self.device, 1, [self.in_flight_fences[self.current_frame]])
+
+    def reset_command_buffer(self):
+        vk.vkResetCommandBuffer(self.command_buffers[self.current_frame], 0)
 
         self.record_command_buffer(self.command_buffers[self.current_frame], image_index, world)
 

@@ -62,5 +62,13 @@ class VulkanEngine:
         if self.instance is not None:
             vk.vkDestroyInstance(self.instance, None)
 
+    def copy_buffer(self, src_buffer, dst_buffer, size):
+        command_buffer = self.resource_manager.begin_single_time_commands()
+
+        copy_region = vk.VkBufferCopy(srcOffset=0, dstOffset=0, size=size)
+        vk.vkCmdCopyBuffer(command_buffer, src_buffer, dst_buffer, 1, [copy_region])
+
+        self.resource_manager.end_single_time_commands(command_buffer)
+
 
 

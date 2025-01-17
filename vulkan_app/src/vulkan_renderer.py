@@ -120,35 +120,7 @@ class VulkanRenderer:
             sType=vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
             flags=vk.VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
         )
-    def copy_buffer(self, src_buffer, dst_buffer, size):
-        allocate_info = vk.VkCommandBufferAllocateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-            level=vk.VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-            commandPool=self.command_pool,
-            commandBufferCount=1,
-        )
-        command_buffer = vk.vkAllocateCommandBuffers(self.device, allocate_info)[0]
-
-        begin_info = vk.VkCommandBufferBeginInfo(
-            sType=vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-            flags=vk.VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-        )
-        vk.vkBeginCommandBuffer(command_buffer, begin_info)
-
-        copy_region = vk.VkBufferCopy(srcOffset=0, dstOffset=0, size=size)
-        vk.vkCmdCopyBuffer(command_buffer, src_buffer, dst_buffer, 1, [copy_region])
-
-        vk.vkEndCommandBuffer(command_buffer)
-
-        submit_info = vk.VkSubmitInfo(
-            sType=vk.VK_STRUCTURE_TYPE_SUBMIT_INFO,
-            commandBufferCount=1,
-            pCommandBuffers=[command_buffer],
-        )
-        vk.vkQueueSubmit(self.graphics_queue, 1, [submit_info], vk.VK_NULL_HANDLE)
-        vk.vkQueueWaitIdle(self.graphics_queue)
-
-        vk.vkFreeCommandBuffers(self.device, self.command_pool, 1, [command_buffer])
+    # Removed copy_buffer method
 
 
         vk.vkEndCommandBuffer(command_buffer)
@@ -175,11 +147,4 @@ class VulkanRenderer:
 
 
     def cleanup(self):
-        self.resource_manager.cleanup() # Cleanup resources
-
-        if self.surface is not None:
-            vk.vkDestroySurfaceKHR(self.instance, self.surface, None)
-        if self.device is not None:
-            vk.vkDestroyDevice(self.device, None)
-        if self.instance is not None:
-            vk.vkDestroyInstance(self.instance, None)
+        self.vulkan_engine.cleanup()
