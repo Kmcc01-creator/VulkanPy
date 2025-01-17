@@ -112,14 +112,15 @@ class VulkanRenderer:
         # Recreate swapchain and related resources
         self.swapchain, self.swapchain_extent = self.create_swapchain()
         self.create_descriptor_pool()
+        self.create_uniform_buffers()
+        self.create_uniform_buffers() # Recreate uniform buffers
+        self.create_descriptor_pool()
         self.create_descriptor_sets()
         self.framebuffers = self.create_framebuffers()
         self.pipeline, self.pipeline_layout, self.descriptor_set_layout = self.create_pipeline() # Recreate pipeline as well
 
         # Recreate command buffers
         self.create_command_buffers()
-
-
 
     def render(self):
         try:
@@ -217,12 +218,11 @@ class VulkanRenderer:
         except vk.VkError as e:
             raise Exception(f"Failed to end recording command buffer: {e}")
 
-    def create_uniform_buffer(self):
-        buffer_size = 4 * 4 * 4 # mat4
-
-        self.uniform_buffer, self.uniform_buffer_memory = self.create_buffer(
-            buffer_size, vk.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-        )
+    def create_uniform_buffers(self):
+        from vulkan_engine.buffer import UniformBuffer
+        self.uniform_buffers = []
+        for _ in range(len(self.framebuffers)): # Create a uniform buffer for each swapchain image
+            self.uniform_buffers.append(UniformBuffer(self, 4 * 4 * 4)) # mat4 size
 
     def create_descriptor_pool(self):
         pool_sizes = []
@@ -256,7 +256,7 @@ class VulkanRenderer:
         write_descriptor_sets = []
         write_descriptor_sets.append(vk.VkWriteDescriptorSet(
             sType=vk.VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            dstSet=self.descriptor_sets[0],
+            dstSet=descriptor_set,
             dstBinding=0,
             dstArrayElement=0,
             descriptorCount=1,
@@ -266,19 +266,8 @@ class VulkanRenderer:
 
         vk.vkUpdateDescriptorSets(self.device, len(write_descriptor_sets), write_descriptor_sets, 0, None)
 
-    def create_buffer(self, size, usage, properties):
-        from vulkan_engine.buffer import create_buffer as create_vk_buffer
-        return create_vk_buffer(self.device, self.physical_device, size, usage, properties)
 
     def copy_buffer(self, src_buffer, dst_buffer, size):
-        command_buffer = self.begin_single_time_commands()
-
-        copy_region = vk.VkBufferCopy(srcOffset=0, dstOffset=0, size=size)
-        vk.vkCmdCopyBuffer(command_buffer, src_buffer, dst_buffer, 1, [copy_region])
-
-        self.end_single_time_commands(command_buffer)
-
-    def begin_single_time_commands(self):
         allocate_info = vk.VkCommandBufferAllocateInfo(
             sType=vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
             level=vk.VK_COMMAND_BUFFER_LEVEL_PRIMARY,

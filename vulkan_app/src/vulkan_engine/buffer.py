@@ -1,4 +1,6 @@
 import vulkan as vk
+import numpy as np
+from pyglm import mat4
 
 import vulkan as vk
 
@@ -34,3 +36,18 @@ def create_buffer(device, physical_device, size, usage, properties):
     vk.vkBindBufferMemory(device, buffer, buffer_memory, 0)
 
     return buffer, buffer_memory
+
+
+class UniformBuffer:
+    def __init__(self, renderer, size):
+        self.renderer = renderer
+        self.size = size
+        self.buffer, self.buffer_memory = self.create_buffer()
+
+    def create_buffer(self):
+        return create_buffer(self.renderer.device, self.renderer.physical_device, self.size, vk.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+
+    def update(self, data):
+        data_ptr = vk.vkMapMemory(self.renderer.device, self.buffer_memory, 0, self.size, 0)
+        vk.ffi.memmove(data_ptr, data.astype(np.float32).tobytes(), self.size) # Assuming data is a numpy array
+        vk.vkUnmapMemory(self.renderer.device, self.buffer_memory)
