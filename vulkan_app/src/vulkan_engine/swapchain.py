@@ -81,7 +81,8 @@ def create_swapchain(instance, device, physical_device, surface, graphics_queue_
 
     try:
         swapchain = vk.vkCreateSwapchainKHR(device, swapchain_create_info, None)
-        return swapchain
+        extent = surface_capabilities.currentExtent
+        return swapchain, extent # Returning extent as well
     except vk.VkError as e:
         raise Exception(f"Failed to create swapchain: {e}")
 

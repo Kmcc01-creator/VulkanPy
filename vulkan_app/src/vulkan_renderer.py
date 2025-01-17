@@ -47,7 +47,11 @@ class VulkanRenderer:
         return create_vk_framebuffers(self.device, self.swapchain, self.render_pass, self.swapchain_extent)
 
     def render(self):
-        pass  # ... Rendering commands ...
+        # ... Rendering commands ...
+        # Acquire next image from swapchain
+        # Record command buffer
+        # Submit command buffer to graphics queue
+        # Present image to screen
 
     def cleanup(self):
         for framebuffer in self.framebuffers:
