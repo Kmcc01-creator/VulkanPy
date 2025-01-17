@@ -54,6 +54,13 @@ class ResourceManager:
         self.add_resource(swapchain, "swapchain")
         return swapchain, extent, swapchain_images
 
+
+    def create_shader_module(self, code): # New method to create shader module
+        from vulkan_engine.shader_module import create_shader_module as create_vk_shader_module
+        module = create_vk_shader_module(self.device, code)
+        self.add_resource(module, "shader_module")
+        return module
+
     def __enter__(self): # No changes here
         return self
 

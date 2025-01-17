@@ -23,9 +23,8 @@ def create_pipeline(device, swapchain_extent, render_pass, resource_manager): # 
     with open("vulkan_app/shaders/shader.frag", "rb") as f:
         frag_shader_code = f.read()
 
-
-    vert_shader_module = create_shader_module(device, vert_shader_code)
-    frag_shader_module = create_shader_module(device, frag_shader_code)
+    vert_shader_module = resource_manager.create_shader_module(vert_shader_code) # Use resource_manager to create shader modules
+    frag_shader_module = resource_manager.create_shader_module(frag_shader_code)
 
     # ... (Shader stage create info) ...
     vert_shader_stage_info = vk.VkPipelineShaderStageCreateInfo(

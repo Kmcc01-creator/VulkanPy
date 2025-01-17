@@ -51,7 +51,8 @@ class VulkanRenderer:
             self.cleanup()
             raise
 
-    def create_uniform_buffers(self):
+
+    def create_uniform_buffers(self): # No changes here yet
         camera_buffer_size = ctypes.sizeof(UniformBufferObject)
         light_buffer_size = ctypes.sizeof(LightUBO)
         self.camera_uniform_buffers = []
