@@ -253,25 +253,10 @@ class VulkanRenderer:
         )
 
         write_descriptor_sets = []
-        for i, uniform_buffer in enumerate(self.uniform_buffers):
-            buffer_info = vk.VkDescriptorBufferInfo(
-                buffer=uniform_buffer.buffer,
-                offset=0,
-                range=uniform_buffer.size,
-            )
-                write_descriptor_sets.append(vk.VkWriteDescriptorSet(
-                sType=vk.VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                dstSet=self.descriptor_sets[i],
-            dstBinding=0,
-            dstArrayElement=0,
-            descriptorCount=1,
-            descriptorType=vk.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            pBufferInfo=[buffer_info],
-        ))
+    def create_descriptor_sets(self):
+        from vulkan_engine.descriptors import create_descriptor_sets as create_vk_descriptor_sets
+        self.descriptor_sets = create_vk_descriptor_sets(self.device, self.descriptor_pool, self.descriptor_set_layout, self.uniform_buffers)
 
-
-
-    def copy_buffer(self, src_buffer, dst_buffer, size): # Helper function remains unchanged
         allocate_info = vk.VkCommandBufferAllocateInfo(
             sType=vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
             level=vk.VK_COMMAND_BUFFER_LEVEL_PRIMARY,
