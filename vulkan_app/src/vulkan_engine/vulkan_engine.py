@@ -12,23 +12,56 @@ logger = logging.getLogger(__name__)
 class VulkanEngine:
     def __init__(self, window):
         self.window = window
+        self.instance = None
+        self.device = None
+        self.surface = None
+        self.resource_manager = None
+        self.swapchain = None
+        self.descriptor_set_layout = None
         logger.info("Initializing VulkanEngine")
+        self.initialize()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.cleanup()
+
+    def initialize(self):
         try:
             self.instance, self.enabled_layers = self.create_instance()
             self.device, self.physical_device, self.graphics_queue_family_index = self.create_device()
-            self.surface = glfw.create_window_surface(self.instance, window, None, None)
+            self.surface = self.create_surface()
             self.resource_manager = ResourceManager(self)
             self.setup_queues()
             self.swapchain = Swapchain(self, self.resource_manager)
             self.create_descriptor_set_layout()
             logger.info("VulkanEngine initialized successfully")
+        except vk.VkError as e:
+            logger.error(f"Vulkan error during initialization: {str(e)}")
+            self.cleanup()
+            raise
         except Exception as e:
             logger.error(f"Failed to initialize VulkanEngine: {str(e)}")
+            self.cleanup()
+            raise
+
+    def create_surface(self):
+        try:
+            return glfw.create_window_surface(self.instance, self.window, None, None)
+        except Exception as e:
+            logger.error(f"Failed to create window surface: {str(e)}")
             raise
 
     def create_instance(self):
         from vulkan_engine.instance import create_instance as create_vk_instance
-        return create_vk_instance()
+        try:
+            instance, enabled_layers = create_vk_instance()
+            logger.info("Vulkan instance created successfully")
+            return instance, enabled_layers
+        except vk.VkError as e:
+            logger.error(f"Failed to create Vulkan instance: {str(e)}")
+            raise
 
     def create_device(self):
         from vulkan_engine.device import create_device as create_vk_device
@@ -65,13 +98,21 @@ class VulkanEngine:
         self.resource_manager.add_resource(self.descriptor_set_layout.layout, "descriptor_set_layout", self.resource_manager.destroy_descriptor_set_layout)
 
     def cleanup(self):
-        self.resource_manager.cleanup()
-        if self.surface is not None:
+        logger.info("Cleaning up VulkanEngine resources")
+        if self.resource_manager:
+            self.resource_manager.cleanup()
+        if self.swapchain:
+            self.swapchain.cleanup()
+        if self.surface:
             vk.vkDestroySurfaceKHR(self.instance, self.surface, None)
-        if self.device is not None:
+            self.surface = None
+        if self.device:
             vk.vkDestroyDevice(self.device, None)
-        if self.instance is not None:
+            self.device = None
+        if self.instance:
             vk.vkDestroyInstance(self.instance, None)
+            self.instance = None
+        logger.info("VulkanEngine cleanup completed")
 
     def copy_buffer(self, src_buffer, dst_buffer, size):
         command_buffer = self.resource_manager.begin_single_time_commands()
