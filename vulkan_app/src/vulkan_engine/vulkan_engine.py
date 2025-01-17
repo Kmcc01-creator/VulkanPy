@@ -52,8 +52,6 @@ class VulkanEngine:
         except Exception as e:
             logger.error(f"Failed to create window surface: {str(e)}")
             raise
-
-    def create_device(self): # No changes here yet
     def setup_queues(self):
         self.graphics_queue = vk.vkGetDeviceQueue(self.device, self.graphics_queue_family_index, 0)
         self.present_queue_family_index = self.find_present_queue_family()
