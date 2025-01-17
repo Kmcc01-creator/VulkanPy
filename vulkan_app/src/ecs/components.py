@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import numpy as np
+from src.vertex import Vertex
 
 @dataclass
 class Transform:
@@ -15,10 +16,10 @@ class Mesh:
     indices: np.ndarray
 
     def __post_init__(self):
-        self.create_vertex_buffer()
+        # This will be called after the object is created. We'll defer vertex buffer creation.
+        pass
 
-    def create_vertex_buffer(self):
-        # ... (Implementation from RenderSystem.update) ...
+    def create_vertex_buffer(self, renderer):
         buffer_size = Vertex.sizeof() * len(self.vertices)
 
         staging_buffer, staging_buffer_memory = renderer.create_buffer(buffer_size, vk.VK_BUFFER_USAGE_TRANSFER_SRC_BIT, vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)

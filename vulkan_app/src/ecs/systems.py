@@ -1,11 +1,10 @@
 import vulkan as vk
+from src.ecs.components import Mesh
 
 class RenderSystem:
     def __init__(self, renderer):
         self.renderer = renderer
 
-    def init_rendering(self, renderer):
-        pass # Placeholder. Will handle vertex buffer creation based on Mesh components
 
     def render(self, command_buffer, world):
         for entity in world.entities:

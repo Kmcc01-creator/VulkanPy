@@ -22,7 +22,9 @@ class VulkanRenderer:
             Vertex(np.array([0.5, -0.5, 0.0]), np.array([0.0, 1.0, 0.0])),
             Vertex(np.array([0.0, 0.5, 0.0]), np.array([0.0, 0.0, 1.0])),
         ]
-        self.world.add_component(entity, Mesh(vertices=vertices, indices=[])) # Now with vertices
+        mesh = Mesh(vertices=vertices, indices=[])
+        mesh.create_vertex_buffer(self) # Pass renderer to create_vertex_buffer
+        self.world.add_component(entity, mesh) # Now with vertices
         self.world.add_component(entity, Material(color=np.array([1.0, 0.0, 0.0])))
 
 
