@@ -18,3 +18,12 @@ class UniformBuffer:
         data_ptr = vk.vkMapMemory(self.resource_manager.device, self.buffer_memory, 0, self.size, 0)
         vk.ffi.memmove(data_ptr, data.astype(np.float32).tobytes(), self.size)
         vk.vkUnmapMemory(self.resource_manager.device, self.buffer_memory)
+
+    def get_data(self):
+        # Placeholder for now.  In a real application, you would map the buffer memory and retrieve the data.
+        from pyglm import mat4, perspective, radians
+        return {
+            "model": mat4(),
+            "view": mat4(),
+            "proj": perspective(radians(45.0), self.resource_manager.renderer.swapchain_extent.width / self.resource_manager.renderer.swapchain_extent.height, 0.1, 10.0)
+        }
