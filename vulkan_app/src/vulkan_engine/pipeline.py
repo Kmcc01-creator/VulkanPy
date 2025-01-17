@@ -59,7 +59,7 @@ def create_pipeline(device, swapchain_extent, render_pass): # Added render_pass
         pBindings=bindings,
     )
 
-    descriptor_set_layout = vk.vkCreateDescriptorSetLayout(device, descriptor_set_layout_info, None)
+    descriptor_set_layout = DescriptorSetLayout(device, bindings) # Create DescriptorSetLayout object
 
     # ... (Pipeline layout create info) ...
     push_constant_range = vk.VkPushConstantRange(
@@ -71,7 +71,7 @@ def create_pipeline(device, swapchain_extent, render_pass): # Added render_pass
     pipeline_layout_create_info = vk.VkPipelineLayoutCreateInfo(
         sType=vk.VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
         setLayoutCount=1,
-        pSetLayouts=[descriptor_set_layout],
+        pSetLayouts=[descriptor_set_layout.layout], # Access layout attribute
         pushConstantRangeCount=1,
         pPushConstantRanges=[push_constant_range],
 
@@ -176,6 +176,4 @@ def create_pipeline(device, swapchain_extent, render_pass): # Added render_pass
     vk.vkDestroyShaderModule(device, vert_shader_module, None)
     vk.vkDestroyShaderModule(device, frag_shader_module, None)
 
-    return graphics_pipeline, pipeline_layout, descriptor_set_layout # Returning descriptor set layout
-    vk.vkDestroyShaderModule(device, vert_shader_module, None)
-    vk.vkDestroyShaderModule(device, frag_shader_module, None)
+    return graphics_pipeline, pipeline_layout, descriptor_set_layout # Returning descriptor set layout object

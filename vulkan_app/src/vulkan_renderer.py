@@ -40,7 +40,7 @@ class VulkanRenderer:
         # Swapchain creation (requires window surface)
         self.swapchain, self.swapchain_extent = self.create_swapchain() # Getting swapchain extent
         self.render_pass = self.create_render_pass()
-        self.pipeline, self.pipeline_layout, self.descriptor_set_layout = self.create_pipeline() # Getting pipeline, layout, and descriptor set layout
+        self.pipeline, self.pipeline_layout = self.create_pipeline() # Getting pipeline and layout
         self.framebuffers = self.create_framebuffers()
         self.create_command_pool() # New: create command pool
 
@@ -111,13 +111,11 @@ class VulkanRenderer:
 
         # Recreate swapchain and related resources
         self.swapchain, self.swapchain_extent = self.create_swapchain()
-        self.create_descriptor_pool()
-        self.create_uniform_buffers()
         self.create_uniform_buffers() # Recreate uniform buffers
         self.create_descriptor_pool()
         self.create_descriptor_sets()
         self.framebuffers = self.create_framebuffers()
-        self.pipeline, self.pipeline_layout, self.descriptor_set_layout = self.create_pipeline() # Recreate pipeline as well
+        self.pipeline, self.pipeline_layout, self.descriptor_set_layout = self.create_pipeline() # Recreate pipeline, layout, and descriptor set layout
 
         # Recreate command buffers
         self.create_command_buffers()
@@ -220,7 +218,7 @@ class VulkanRenderer:
 
     def create_descriptor_pool(self):
         from vulkan_engine.descriptors import create_descriptor_pool as create_vk_descriptor_pool
-        self.descriptor_pool = create_vk_descriptor_pool(self.device, self.descriptor_set_layout)
+        self.descriptor_pool = create_vk_descriptor_pool(self.device, self.descriptor_set_layout.layout) # Access layout attribute
 
     def create_uniform_buffers(self):
         from vulkan_engine.descriptors import create_uniform_buffers as create_vk_uniform_buffers
