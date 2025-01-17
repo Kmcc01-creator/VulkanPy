@@ -8,6 +8,7 @@ class Transform:
     rotation: np.ndarray
     scale: np.ndarray
 
+from src.object_loader import load_obj # Import the load_obj function
 import vulkan as vk
 
 @dataclass
@@ -19,7 +20,9 @@ class Mesh:
         # This will be called after the object is created. We'll defer vertex buffer creation.
         pass
 
-    def create_vertex_buffer(self, renderer):
+    def create_vertex_buffer(self, renderer, filepath): # Add filepath argument
+        self.vertices, self.indices = load_obj(filepath) # Load vertices and indices from file
+
         buffer_size = Vertex.sizeof() * len(self.vertices)
 
         staging_buffer, staging_buffer_memory = renderer.create_buffer(buffer_size, vk.VK_BUFFER_USAGE_TRANSFER_SRC_BIT, vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)

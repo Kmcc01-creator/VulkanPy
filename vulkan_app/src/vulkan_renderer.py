@@ -17,14 +17,9 @@ class VulkanRenderer:
         # Test entity
         entity = self.world.create_entity()
         self.world.add_component(entity, Transform(position=np.array([0.0, 0.0, 0.0]), rotation=np.array([0.0, 0.0, 0.0]), scale=np.array([1.0, 1.0, 1.0])))
-        from src.vertex import Vertex
-        vertices = [
-            Vertex(np.array([-0.5, -0.5, 0.0]), np.array([1.0, 0.0, 0.0])),
-            Vertex(np.array([0.5, -0.5, 0.0]), np.array([0.0, 1.0, 0.0])),
-            Vertex(np.array([0.0, 0.5, 0.0]), np.array([0.0, 0.0, 1.0])),
-        ]
-        mesh = Mesh(vertices=vertices, indices=[])
-        mesh.create_vertex_buffer(self) # Pass renderer to create_vertex_buffer
+
+        mesh = Mesh(vertices=[], indices=[]) # Initialize empty mesh
+        mesh.create_vertex_buffer(self, "vulkan_app/models/triangle.obj") # Load from file
         self.world.add_component(entity, mesh) # Now with vertices
         self.world.add_component(entity, Material(color=np.array([1.0, 0.0, 0.0])))
 
