@@ -57,6 +57,38 @@ class ResourceManager:
             logger.error(f"Unexpected error during buffer creation: {e}")
             raise
 
+    def create_sync_objects(self, num_images):
+        image_available_semaphores = []
+        render_finished_semaphores = []
+        in_flight_fences = []
+
+        semaphore_create_info = vk.VkSemaphoreCreateInfo(
+            sType=vk.VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO
+        )
+        fence_create_info = vk.VkFenceCreateInfo(
+            sType=vk.VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+            flags=vk.VK_FENCE_CREATE_SIGNALED_BIT,
+        )
+
+        for _ in range(num_images):
+            try:
+                image_available_semaphore = vk.vkCreateSemaphore(self.device, semaphore_create_info, None)
+                render_finished_semaphore = vk.vkCreateSemaphore(self.device, semaphore_create_info, None)
+                in_flight_fence = vk.vkCreateFence(self.device, fence_create_info, None)
+
+                self.add_resource(image_available_semaphore, "semaphore")
+                self.add_resource(render_finished_semaphore, "semaphore")
+                self.add_resource(in_flight_fence, "fence")
+
+                image_available_semaphores.append(image_available_semaphore)
+                render_finished_semaphores.append(render_finished_semaphore)
+                in_flight_fences.append(in_flight_fence)
+
+            except vk.VkError as e:
+                raise Exception(f"Failed to create synchronization objects: {e}")
+
+        return image_available_semaphores, render_finished_semaphores, in_flight_fences
+
     def create_image(self, width, height, format, usage, memory_properties):
         cache_key = (width, height, format, usage, memory_properties)
         if cache_key in self.resource_cache:
