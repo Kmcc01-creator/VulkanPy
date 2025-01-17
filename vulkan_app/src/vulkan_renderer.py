@@ -66,6 +66,22 @@ class VulkanRenderer:
         from vulkan_engine.synchronization import create_sync_objects as create_vk_sync_objects
         self.image_available_semaphores, self.render_finished_semaphores, self.in_flight_fences = create_vk_sync_objects(self.device, len(self.framebuffers))
 
+    def recreate_swapchain(self):
+        vk.vkDeviceWaitIdle(self.device)
+
+        # Destroy old swapchain and related resources
+        for framebuffer in self.framebuffers:
+            vk.vkDestroyFramebuffer(self.device, framebuffer, None)
+        vk.vkDestroySwapchainKHR(self.device, self.swapchain, None)
+
+        # Recreate swapchain and related resources
+        self.swapchain, self.swapchain_extent = self.create_swapchain()
+        self.render_pass = self.create_render_pass()
+        self.framebuffers = self.create_framebuffers()
+
+        # Recreate command buffers
+        self.create_command_buffers()
+
 
     def render(self):
         try:
@@ -112,6 +128,55 @@ class VulkanRenderer:
             return
 
         self.current_frame = (self.current_frame + 1) % len(self.framebuffers)
+
+    def record_command_buffer(self, command_buffer, image_index):
+        begin_info = vk.VkCommandBufferBeginInfo(
+            sType=vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        )
+
+        try:
+            vk.vkBeginCommandBuffer(command_buffer, begin_info)
+        except vk.VkError as e:
+            raise Exception(f"Failed to begin recording command buffer: {e}")
+
+        render_pass_begin_info = vk.VkRenderPassBeginInfo(
+            sType=vk.VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+            renderPass=self.render_pass,
+            framebuffer=self.framebuffers[image_index],
+            renderArea=vk.VkRect2D(
+                offset=vk.VkOffset2D(x=0, y=0),
+                extent=self.swapchain_extent,
+            ),
+            clearValueCount=1,
+            pClearValues=[vk.VkClearValue(color=vk.VkClearColorValue(float32=[0.0, 0.0, 0.0, 1.0]))],
+        )
+
+        vk.vkCmdBeginRenderPass(command_buffer, render_pass_begin_info, vk.VK_SUBPASS_CONTENTS_INLINE)
+        vk.vkCmdBindPipeline(command_buffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, self.pipeline)
+
+        viewport = vk.VkViewport(
+            x=0.0,
+            y=0.0,
+            width=float(self.swapchain_extent.width),
+            height=float(self.swapchain_extent.height),
+            minDepth=0.0,
+            maxDepth=1.0,
+        )
+        vk.vkCmdSetViewport(command_buffer, 0, 1, [viewport])
+
+        scissor = vk.VkRect2D(
+            offset=vk.VkOffset2D(x=0, y=0),
+            extent=self.swapchain_extent,
+        )
+        vk.vkCmdSetScissor(command_buffer, 0, 1, [scissor])
+
+        # vk.vkCmdDraw(command_buffer, 3, 1, 0, 0)  # Example: Draw 3 vertices
+        vk.vkCmdEndRenderPass(command_buffer)
+
+        try:
+            vk.vkEndCommandBuffer(command_buffer)
+        except vk.VkError as e:
+            raise Exception(f"Failed to end recording command buffer: {e}")
 
 
     def cleanup(self):
