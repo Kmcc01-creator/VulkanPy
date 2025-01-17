@@ -1,9 +1,24 @@
 import vulkan as vk
 import glfw
 
+from src.ecs.world import World
+from src.ecs.systems import RenderSystem
+from src.ecs.components import Transform, Mesh, Material
+import numpy as np
+
 class VulkanRenderer:
     def __init__(self, window):
         self.window = window
+        self.world = World()
+        self.render_system = RenderSystem(self)
+        self.world.add_system(self.render_system)
+
+        # Test entity
+        entity = self.world.create_entity()
+        self.world.add_component(entity, Transform(position=np.array([0.0, 0.0, 0.0]), rotation=np.array([0.0, 0.0, 0.0]), scale=np.array([1.0, 1.0, 1.0])))
+        self.world.add_component(entity, Mesh(vertices=[], indices=[])) # Empty mesh for now
+        self.world.add_component(entity, Material(color=np.array([1.0, 0.0, 0.0])))
+
 
         # Vulkan Instance creation
         self.instance, self.enabled_layers = self.create_instance()
@@ -18,15 +33,13 @@ class VulkanRenderer:
         self.swapchain, self.swapchain_extent = self.create_swapchain() # Getting swapchain extent
         self.render_pass = self.create_render_pass()
         self.pipeline, self.pipeline_layout, self.descriptor_set_layout = self.create_pipeline() # Getting pipeline, layout, and descriptor set layout
-        self.create_descriptor_pool()
-        self.create_descriptor_sets()
         self.framebuffers = self.create_framebuffers()
         self.create_command_pool() # New: create command pool
+
         self.create_command_buffers() # New: create command buffers
         self.create_sync_objects() # New: create synchronization objects
         self.create_uniform_buffer()
-        self.create_descriptor_pool()
-        self.create_descriptor_sets()
+
 
         self.current_frame = 0
         self.graphics_queue = vk.vkGetDeviceQueue(self.device, self.graphics_queue_family_index, 0)
@@ -96,8 +109,6 @@ class VulkanRenderer:
         self.create_descriptor_sets()
         self.framebuffers = self.create_framebuffers()
         self.pipeline, self.pipeline_layout, self.descriptor_set_layout = self.create_pipeline() # Recreate pipeline as well
-        self.create_vertex_buffer() # Recreate vertex buffer
-
 
         # Recreate command buffers
         self.create_command_buffers()
