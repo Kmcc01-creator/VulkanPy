@@ -81,7 +81,7 @@ class Swapchain:
         self.create_swapchain()
         self.create_image_views() # Call create_image_views after creating the swapchain
         self.create_render_pass()
-        self.create_pipeline()
+        self.create_pipeline() # The pipeline creation logic is now handled within this function
         self.create_framebuffers()
         self.create_uniform_buffers()
         self.create_descriptor_pool()
@@ -120,8 +120,7 @@ class Swapchain:
                 swapchain_create_info.queueFamilyIndexCount = 2
                 swapchain_create_info.pQueueFamilyIndices = [self.graphics_queue_family_index, self.present_queue_family_index]
 
-            self.swapchain = vk.vkCreateSwapchainKHR(self.device, swapchain_create_info, None)
-            self.resource_manager.add_resource(self.swapchain, "swapchain", self.resource_manager.destroy_swapchain)
+            self.swapchain = self.resource_manager.create_swapchain(swapchain_create_info)
             self.extent = swapchain_extent
             self.swapchain_images = vk.vkGetSwapchainImagesKHR(self.device, self.swapchain)
             self.create_image_views()

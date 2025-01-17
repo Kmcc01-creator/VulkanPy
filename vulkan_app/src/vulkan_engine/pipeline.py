@@ -16,7 +16,7 @@ def create_shader_module(device, shader_code):
 from vulkan_engine.descriptors import DescriptorSetLayout
 from src.vertex import Vertex
 
-def create_pipeline(device, swapchain_extent, render_pass, resource_manager):
+def create_pipeline(device, swapchain_extent, render_pass, resource_manager): # Add resource_manager as parameter
     # ... (Load shader code from shader.vert and shader.frag) ...
     with open("vulkan_app/shaders/shader.vert", "rb") as f:
         vert_shader_code = f.read()
@@ -62,8 +62,7 @@ def create_pipeline(device, swapchain_extent, render_pass, resource_manager):
         pBindings=bindings,
     )
 
-    descriptor_set_layout = DescriptorSetLayout(device, bindings)
-    resource_manager.add_resource(descriptor_set_layout.layout, "descriptor_set_layout", resource_manager.destroy_descriptor_set_layout)
+    descriptor_set_layout = DescriptorSetLayout(device, bindings, resource_manager) # Pass resource_manager to DescriptorSetLayout
 
     # ... (Pipeline layout create info) ...
     push_constant_range = vk.VkPushConstantRange(
@@ -83,7 +82,7 @@ def create_pipeline(device, swapchain_extent, render_pass, resource_manager):
     vertex_input_bindings = Vertex.get_binding_descriptions()
     vertex_input_attributes = Vertex.get_attribute_descriptions()
 
-    pipeline_layout = vk.vkCreatePipelineLayout(device, pipeline_layout_create_info, None)
+    pipeline_layout = resource_manager.create_pipeline_layout(pipeline_layout_create_info) # Use resource_manager to create pipeline layout
 
 
     # Vertex Input state
@@ -171,8 +170,8 @@ def create_pipeline(device, swapchain_extent, render_pass, resource_manager):
 
     # ... (Create graphics pipeline) ...
     try:
-        graphics_pipeline = vk.vkCreateGraphicsPipelines(device, None, 1, [pipeline_create_info], None)[0]
-        return graphics_pipeline, pipeline_layout # Returning the pipeline layout as well
+        graphics_pipeline = resource_manager.create_graphics_pipeline(pipeline_create_info) # Use resource_manager to create graphics pipeline
+        return graphics_pipeline, pipeline_layout, descriptor_set_layout # Return descriptor_set_layout
     except vk.VkError as e:
         raise Exception(f"Failed to create graphics pipeline: {e}")
 

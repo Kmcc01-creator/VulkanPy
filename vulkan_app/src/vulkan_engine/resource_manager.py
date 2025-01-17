@@ -14,10 +14,23 @@ class ResourceManager:
         self.resources = {}
         self.memory_allocator = MemoryAllocator(self.physical_device, self.device)
         self.resource_cache = {}
+        self.shader_modules = {}
 
-    def create_graphics_pipeline(self, device, swapchain_extent, render_pass, descriptor_set_layout):
-        # ... (Existing pipeline creation logic from pipeline.py) ...
-        self.shader_modules = {} # Store shader modules
+    def create_pipeline_layout(self, create_info):
+        pipeline_layout = vk.vkCreatePipelineLayout(self.device, create_info, None)
+        self.add_resource(pipeline_layout, "pipeline_layout")
+        return pipeline_layout
+
+    def create_graphics_pipeline(self, create_info):
+        graphics_pipelines = vk.vkCreateGraphicsPipelines(self.device, None, 1, [create_info], None)
+        graphics_pipeline = graphics_pipelines[0]
+        self.add_resource(graphics_pipeline, "graphics_pipeline")
+        return graphics_pipeline
+
+    def create_swapchain(self, create_info):
+        swapchain = vk.vkCreateSwapchainKHR(self.device, create_info, None)
+        self.add_resource(swapchain, "swapchain")
+        return swapchain
 
     def __enter__(self):
         return self
