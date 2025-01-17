@@ -1,4 +1,5 @@
 import vulkan as vk
+import logging
 from vulkan_engine.vulkan_engine import VulkanEngine
 from vulkan_renderer.render_manager import RenderManager
 from src.ecs.world import World
@@ -7,16 +8,24 @@ from src.ecs.components import Transform, Mesh, Material, Camera
 import numpy as np
 import glfw
 
+logger = logging.getLogger(__name__)
+
 class VulkanRenderer:
     def __init__(self, window):
         self.window = window
-        self.vulkan_engine = VulkanEngine(window)
-        self.render_manager = RenderManager(self.vulkan_engine)
-        self.current_frame = 0
+        logger.info("Initializing VulkanRenderer")
+        try:
+            self.vulkan_engine = VulkanEngine(window)
+            self.render_manager = RenderManager(self.vulkan_engine)
+            self.current_frame = 0
 
-        glfw.set_framebuffer_size_callback(window, self.framebuffer_resize_callback)
+            glfw.set_framebuffer_size_callback(window, self.framebuffer_resize_callback)
 
-        self.init_world()
+            self.init_world()
+            logger.info("VulkanRenderer initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize VulkanRenderer: {str(e)}")
+            raise
 
     def init_world(self):
         self.world = World()

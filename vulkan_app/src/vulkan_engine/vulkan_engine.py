@@ -1,19 +1,30 @@
 import vulkan as vk
 import glfw
+import logging
 from vulkan_engine.swapchain import Swapchain
 from vulkan_engine.resource_manager import ResourceManager
 from vulkan_engine.descriptors import DescriptorSetLayout
+from utils.logging_config import setup_logging
+
+setup_logging()
+logger = logging.getLogger(__name__)
 
 class VulkanEngine:
     def __init__(self, window):
         self.window = window
-        self.instance, self.enabled_layers = self.create_instance()
-        self.device, self.physical_device, self.graphics_queue_family_index = self.create_device()
-        self.surface = glfw.create_window_surface(self.instance, window, None, None)
-        self.resource_manager = ResourceManager(self)
-        self.setup_queues()
-        self.swapchain = Swapchain(self, self.resource_manager)
-        self.create_descriptor_set_layout()
+        logger.info("Initializing VulkanEngine")
+        try:
+            self.instance, self.enabled_layers = self.create_instance()
+            self.device, self.physical_device, self.graphics_queue_family_index = self.create_device()
+            self.surface = glfw.create_window_surface(self.instance, window, None, None)
+            self.resource_manager = ResourceManager(self)
+            self.setup_queues()
+            self.swapchain = Swapchain(self, self.resource_manager)
+            self.create_descriptor_set_layout()
+            logger.info("VulkanEngine initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize VulkanEngine: {str(e)}")
+            raise
 
     def create_instance(self):
         from vulkan_engine.instance import create_instance as create_vk_instance

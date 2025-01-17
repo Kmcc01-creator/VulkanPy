@@ -1,7 +1,10 @@
 import vulkan as vk
+import logging
 from vulkan_engine.command_buffer import create_command_pool, create_command_buffers
 from vulkan_engine.synchronization import create_sync_objects
 from src.ecs.components import Mesh, Transform
+
+logger = logging.getLogger(__name__)
 
 class RenderManager:
     def __init__(self, vulkan_engine):
@@ -13,7 +16,13 @@ class RenderManager:
         self.render_finished_semaphores = []
         self.in_flight_fences = []
         self.current_frame = 0
-        self.init_rendering()
+        logger.info("Initializing RenderManager")
+        try:
+            self.init_rendering()
+            logger.info("RenderManager initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize RenderManager: {str(e)}")
+            raise
 
     def init_rendering(self):
         self.create_command_pool()
