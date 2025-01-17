@@ -2,10 +2,9 @@ import vulkan as vk
 
 def check_instance_extensions(layer_properties):
     available_extensions = vk.vkEnumerateInstanceExtensionProperties(None, None)
-    required_extensions = {
-        vk.VK_KHR_SURFACE_EXTENSION_NAME,
-        # Add other platform-specific extensions here (GLFW, etc.)
-    }
+
+    glfw_extensions = set(glfw.get_required_instance_extensions())
+    required_extensions = glfw_extensions | {vk.VK_KHR_SURFACE_EXTENSION_NAME}
 
     for extension in required_extensions:
         found = False
