@@ -4,7 +4,8 @@ from vulkan_engine.vulkan_engine import VulkanEngine
 from vulkan_renderer.render_manager import RenderManager
 from src.ecs.world import World
 from src.ecs.systems import RenderSystem, CameraSystem
-from src.ecs.components import Transform, Mesh, Material, Camera
+from src.ecs.components import Transform, Mesh, Material, Camera, Light, Shader
+from src.shader_manager import ShaderManager
 import numpy as np
 import glfw
 
@@ -16,16 +17,22 @@ class VulkanRenderer:
         logger.info("Initializing VulkanRenderer")
         try:
             self.vulkan_engine = VulkanEngine(window)
-            self.render_manager = RenderManager(self.vulkan_engine)
+            self.shader_manager = ShaderManager(self.vulkan_engine.device)
+            self.render_manager = RenderManager(self.vulkan_engine, self.shader_manager)
             self.current_frame = 0
 
             glfw.set_framebuffer_size_callback(window, self.framebuffer_resize_callback)
 
             self.init_world()
+            self.load_shaders()
             logger.info("VulkanRenderer initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize VulkanRenderer: {str(e)}")
             raise
+
+    def load_shaders(self):
+        self.shader_manager.load_shader('default', 'shaders/default.vert', 'shaders/default.frag')
+        self.shader_manager.load_shader('pbr', 'shaders/pbr.vert', 'shaders/pbr.frag')
 
     def init_world(self):
         self.world = World()
@@ -34,15 +41,25 @@ class VulkanRenderer:
         self.world.add_system(self.camera_system)
         self.world.add_system(self.render_system)
 
-        entity = self.world.create_entity()
+        # Camera
+        camera_entity = self.world.create_entity()
         self.camera_component = Camera()
-        self.world.add_component(entity, self.camera_component)
-        self.world.add_component(entity, Transform(position=np.array([0.0, 0.0, 0.0]), rotation=np.array([0.0, 0.0, 0.0]), scale=np.array([1.0, 1.0, 1.0])))
+        self.world.add_component(camera_entity, self.camera_component)
+        self.world.add_component(camera_entity, Transform(position=np.array([0.0, 0.0, -5.0]), rotation=np.array([0.0, 0.0, 0.0]), scale=np.array([1.0, 1.0, 1.0])))
 
+        # Light
+        light_entity = self.world.create_entity()
+        self.world.add_component(light_entity, Light(position=np.array([5.0, 5.0, 5.0]), color=np.array([1.0, 1.0, 1.0]), intensity=1.0))
+        self.world.add_component(light_entity, Transform(position=np.array([5.0, 5.0, 5.0]), rotation=np.array([0.0, 0.0, 0.0]), scale=np.array([1.0, 1.0, 1.0])))
+
+        # Object
+        object_entity = self.world.create_entity()
         mesh = Mesh(vertices=[], indices=[])
-        mesh.create_vertex_buffer(self.vulkan_engine.resource_manager, "vulkan_app/models/triangle.obj")
-        self.world.add_component(entity, mesh)
-        self.world.add_component(entity, Material(color=np.array([1.0, 0.0, 0.0])))
+        mesh.create_vertex_buffer(self.vulkan_engine.resource_manager, "vulkan_app/models/sphere.obj")
+        self.world.add_component(object_entity, mesh)
+        self.world.add_component(object_entity, Material(albedo=np.array([0.7, 0.7, 0.7]), metallic=0.5, roughness=0.5, ao=1.0))
+        self.world.add_component(object_entity, Transform(position=np.array([0.0, 0.0, 0.0]), rotation=np.array([0.0, 0.0, 0.0]), scale=np.array([1.0, 1.0, 1.0])))
+        self.world.add_component(object_entity, Shader(vertex_shader='pbr', fragment_shader='pbr'))
 
     def render(self):
         self.render_manager.render(self.world)
