@@ -242,39 +242,7 @@ class Swapchain:
 
     def create_descriptor_sets(self):
         self.descriptor_sets = create_descriptor_sets(self.device, self.descriptor_pool, self.descriptor_set_layout, self.uniform_buffers)
-    swapchain_images = vk.vkGetSwapchainImagesKHR(device, swapchain)
-    swapchain_images = vk.vkGetSwapchainImagesKHR(device, swapchain)
-    framebuffers = []
 
-    for image in swapchain_images:
-        image_view_create_info = vk.VkImageViewCreateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            image=image,
-            viewType=vk.VK_IMAGE_VIEW_TYPE_2D,
-            format=vk.vkGetSwapchainImagesKHR(device, swapchain)[0].format, # Getting format from first image, assuming all are same.
-            components=vk.VkComponentMapping(), # Default component mapping
-            subresourceRange=vk.VkImageSubresourceRange(
-                aspectMask=vk.VK_IMAGE_ASPECT_COLOR_BIT,
-                baseMipLevel=0,
-                levelCount=1,
-                baseArrayLayer=0,
-                layerCount=1,
-            )
-        )
-        image_view = vk.vkCreateImageView(device, image_view_create_info, None)
-
-        framebuffer_create_info = vk.VkFramebufferCreateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-            renderPass=render_pass,
-            attachmentCount=1,
-            pAttachments=[image_view],
-            width=extent.width,
-            height=extent.height,
-            layers=1,
-        )
-
-        framebuffer = vk.vkCreateFramebuffer(device, framebuffer_create_info, None)
-        framebuffers.append(framebuffer)
     def recreate_swapchain(self):
         vk.vkDeviceWaitIdle(self.device)
 
