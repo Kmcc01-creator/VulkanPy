@@ -280,9 +280,9 @@ class VulkanRenderer:
             sType=vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
             flags=vk.VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
         )
-        vk.vkBeginCommandBuffer(command_buffer, begin_info)
+        copy_region = vk.VkBufferCopy(srcOffset=0, dstOffset=0, size=size)
+        vk.vkCmdCopyBuffer(command_buffer, src_buffer, dst_buffer, 1, [copy_region])
 
-        return command_buffer
 
     def end_single_time_commands(self, command_buffer):
         vk.vkEndCommandBuffer(command_buffer)
