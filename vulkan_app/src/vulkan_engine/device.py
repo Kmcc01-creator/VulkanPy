@@ -26,18 +26,23 @@ def create_device(instance):
         pQueuePriorities=[1.0],  # Queue priority (0.0 - 1.0)
     )
 
+    enabled_extensions = [vk.VK_KHR_SWAPCHAIN_EXTENSION_NAME] # Enabling the swapchain extension
+
     enabled_features = vk.VkPhysicalDeviceFeatures() # Enable desired device features
     device_create_info = vk.VkDeviceCreateInfo(
         sType=vk.VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
         queueCreateInfoCount=1,
         pQueueCreateInfos=[queue_create_info],
-        enabledExtensionCount=0,  # Add enabled device extensions here if needed
-        ppEnabledExtensionNames=[],
+        enabledExtensionCount=len(enabled_extensions),  # Enabling the swapchain extension
+        ppEnabledExtensionNames=enabled_extensions, # Enabling the swapchain extension
         pEnabledFeatures=enabled_features,
+        enabledLayerCount=len(enabled_layers),
+        ppEnabledLayerNames=enabled_layers
     )
 
     try:
         device = vk.vkCreateDevice(physical_device, device_create_info, None)
+
         return device, physical_device, graphics_queue_family_index
     except vk.VkError as e:
         raise Exception(f"Failed to create Vulkan device: {e}")

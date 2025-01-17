@@ -44,9 +44,74 @@ def create_pipeline(device, swapchain_extent, render_pass): # Added render_pass
     # ... (Pipeline layout create info) ...
     pipeline_layout_create_info = vk.VkPipelineLayoutCreateInfo(
         sType=vk.VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        setLayoutCount=0, # Placeholder for descriptor set layouts
+        pSetLayouts=None, # Placeholder for descriptor set layouts
+        pushConstantRangeCount=0, # Placeholder for push constant ranges
+        pPushConstantRanges=None, # Placeholder for push constant ranges
+
+    )
+    pipeline_layout = vk.vkCreatePipelineLayout(device, pipeline_layout_create_info, None)
+
+    # Vertex Input state
+    vertex_input_state = vk.VkPipelineVertexInputStateCreateInfo(
+        sType=vk.VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+        vertexBindingDescriptionCount=len(vertex_input_bindings),
+        pVertexBindingDescriptions=vertex_input_bindings,
+        vertexAttributeDescriptionCount=len(vertex_input_attributes),
+        pVertexAttributeDescriptions=vertex_input_attributes,
     )
 
-    pipeline_layout = vk.vkCreatePipelineLayout(device, pipeline_layout_create_info, None)
+    # Input Assembly state
+    input_assembly_state = vk.VkPipelineInputAssemblyStateCreateInfo(
+        sType=vk.VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+        topology=vk.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+        primitiveRestartEnable=vk.VK_FALSE,
+    )
+
+    # Viewport and Scissor state (using dynamic states for now)
+    viewport_state = vk.VkPipelineViewportStateCreateInfo(
+        sType=vk.VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+        viewportCount=1,
+        scissorCount=1,
+    )
+
+    # Rasterization state
+    rasterization_state = vk.VkPipelineRasterizationStateCreateInfo(
+        sType=vk.VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+        polygonMode=vk.VK_POLYGON_MODE_FILL,
+        cullMode=vk.VK_CULL_MODE_BACK_BIT,
+        frontFace=vk.VK_FRONT_FACE_COUNTER_CLOCKWISE,
+        lineWidth=1.0,
+    )
+
+    # Multisampling state
+    multisample_state = vk.VkPipelineMultisampleStateCreateInfo(
+        sType=vk.VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+        rasterizationSamples=vk.VK_SAMPLE_COUNT_1_BIT,
+    )
+
+    # Depth/Stencil state (if needed)
+    # ...
+
+    # Color blend state
+    color_blend_attachment_state = vk.VkPipelineColorBlendAttachmentState(
+        colorWriteMask=vk.VK_COLOR_COMPONENT_R_BIT | vk.VK_COLOR_COMPONENT_G_BIT | vk.VK_COLOR_COMPONENT_B_BIT | vk.VK_COLOR_COMPONENT_A_BIT,
+        blendEnable=vk.VK_FALSE,  # Disable blending for now
+    )
+
+    color_blend_state = vk.VkPipelineColorBlendStateCreateInfo(
+        sType=vk.VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+        attachmentCount=1,
+        pAttachments=[color_blend_attachment_state],
+    )
+
+    # Dynamic states (viewport and scissor)
+    dynamic_states = [vk.VK_DYNAMIC_STATE_VIEWPORT, vk.VK_DYNAMIC_STATE_SCISSOR]
+    dynamic_state = vk.VkPipelineDynamicStateCreateInfo(
+        sType=vk.VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+        dynamicStateCount=len(dynamic_states),
+        pDynamicStates=dynamic_states,
+    )
 
 
     # ... (Pipeline create info) ...
@@ -54,14 +119,14 @@ def create_pipeline(device, swapchain_extent, render_pass): # Added render_pass
         sType=vk.VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
         stageCount=len(shader_stages),
         pStages=shader_stages,
-        pVertexInputState=None,  # Add vertex input state
-        pInputAssemblyState=None,  # Add input assembly state
-        pViewportState=None,      # Add viewport state
-        pRasterizationState=None,  # Add rasterization state
-        pMultisampleState=None,   # Add multisample state
-        pDepthStencilState=None,  # Add depth stencil state
-        pColorBlendState=None,    # Add color blend state
-        pDynamicState=None,      # Add dynamic state
+        pVertexInputState=vertex_input_state,
+        pInputAssemblyState=input_assembly_state,
+        pViewportState=viewport_state,
+        pRasterizationState=rasterization_state,
+        pMultisampleState=multisample_state,
+        pDepthStencilState=None,  # Add depth stencil state if needed
+        pColorBlendState=color_blend_state,
+        pDynamicState=dynamic_state,
         layout=pipeline_layout,
         renderPass=render_pass,   # Set render pass
         subpass=0,

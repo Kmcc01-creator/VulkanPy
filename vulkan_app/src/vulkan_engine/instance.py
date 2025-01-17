@@ -20,7 +20,11 @@ def check_instance_extensions(layer_properties):
 
 def create_instance():
     layer_properties = vk.vkEnumerateInstanceLayerProperties()
-    enabled_layers = []  # Add desired validation layers here if needed
+    # Validation Layers
+    available_layers = vk.vkEnumerateInstanceLayerProperties()
+    validation_layers = ["VK_LAYER_KHRONOS_validation"]
+    enabled_layers = [layer.layerName for layer in available_layers if layer.layerName in validation_layers]
+
 
     enabled_extensions = check_instance_extensions(layer_properties)
 

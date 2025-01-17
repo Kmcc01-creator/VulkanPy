@@ -5,11 +5,20 @@ from src.input_handler import InputHandler
 
 def main():
     window_manager = WindowManager(800, 600, "Vulkan App")
-    window = window_manager.create_window()
+    if not glfw.init():
+        raise RuntimeError("Failed to initialize GLFW")
+
+    glfw.window_hint(glfw.CLIENT_API, glfw.NO_API)
+    window = glfw.create_window(800, 600, "Vulkan App", None, None)
+
+    if not window:
+        glfw.terminate()
+        raise RuntimeError("Failed to create GLFW window")
+
     renderer = VulkanRenderer(window)
     input_handler = InputHandler(window)
 
-    while not glfw.window_should_close(window):  # Example using GLFW
+    while not glfw.window_should_close(window):
         input_handler.process_input()
         renderer.render()
 
