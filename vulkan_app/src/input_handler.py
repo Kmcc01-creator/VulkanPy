@@ -1,18 +1,18 @@
+import glfw
+from pyglm import vec3
+
 class InputHandler:
     def __init__(self, window):
         self.window = window
-        # ... Input setup ...
+        self.key_mappings = {
+            glfw.KEY_W: vec3(0.0, 0.0, 1.0),
+            glfw.KEY_S: vec3(0.0, 0.0, -1.0),
+            glfw.KEY_A: vec3(-1.0, 0.0, 0.0),
+            glfw.KEY_D: vec3(1.0, 0.0, 0.0)
+        }
 
-    def process_input(self, camera): # Add camera as argument
-        import glfw # Import glfw
-        from pyglm import vec3
-
-        camera_speed = 0.01 # Adjust camera speed as needed
-        if glfw.get_key(self.window, glfw.KEY_W) == glfw.PRESS:
-            camera.position += vec3(0.0, 0.0, camera_speed)
-        if glfw.get_key(self.window, glfw.KEY_S) == glfw.PRESS:
-            camera.position -= vec3(0.0, 0.0, camera_speed)
-        if glfw.get_key(self.window, glfw.KEY_A) == glfw.PRESS:
-            camera.position -= vec3(camera_speed, 0.0, 0.0)
-        if glfw.get_key(self.window, glfw.KEY_D) == glfw.PRESS:
-            camera.position += vec3(camera_speed, 0.0, 0.0)
+    def process_input(self, camera):
+        camera_speed = 0.01
+        for key, direction in self.key_mappings.items():
+            if glfw.get_key(self.window, key) == glfw.PRESS:
+                camera.position += direction * camera_speed

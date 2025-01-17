@@ -43,11 +43,24 @@ class RenderManager:
         except vk.VkErrorOutOfDateKHR:
             self.vulkan_engine.recreate_swapchain()
             return
+        except vk.VkError as e:
+            raise RuntimeError(f"Failed to acquire swap chain image: {str(e)}")
 
-        vk.vkWaitForFences(self.device, 1, [self.in_flight_fences[self.current_frame]], vk.VK_TRUE, vk.UINT64_MAX)
-        vk.vkResetFences(self.device, 1, [self.in_flight_fences[self.current_frame]])
+        try:
+            vk.vkWaitForFences(self.device, 1, [self.in_flight_fences[self.current_frame]], vk.VK_TRUE, vk.UINT64_MAX)
+        except vk.VkError as e:
+            raise RuntimeError(f"Failed to wait for fence: {str(e)}")
 
-        vk.vkResetCommandBuffer(self.command_buffers[self.current_frame], 0)
+        try:
+            vk.vkResetFences(self.device, 1, [self.in_flight_fences[self.current_frame]])
+        except vk.VkError as e:
+            raise RuntimeError(f"Failed to reset fence: {str(e)}")
+
+        try:
+            vk.vkResetCommandBuffer(self.command_buffers[self.current_frame], 0)
+        except vk.VkError as e:
+            raise RuntimeError(f"Failed to reset command buffer: {str(e)}")
+
         self.record_command_buffer(self.command_buffers[self.current_frame], image_index, world)
 
         submit_info = vk.VkSubmitInfo(
