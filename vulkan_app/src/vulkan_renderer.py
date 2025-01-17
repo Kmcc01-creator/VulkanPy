@@ -4,6 +4,7 @@ import glfw
 from src.ecs.world import World
 from src.ecs.systems import RenderSystem
 from src.ecs.components import Transform, Mesh, Material
+from vulkan_engine.resource_manager import ResourceManager # Importing ResourceManager
 import numpy as np
 
 class VulkanRenderer:
@@ -82,6 +83,8 @@ class VulkanRenderer:
 
     def recreate_swapchain(self):
         vk.vkDeviceWaitIdle(self.device) # Wait for device to be idle
+
+        width = int(glfw.get_framebuffer_size(self.window)[0]) # Define width
         height = int(glfw.get_framebuffer_size(self.window)[1])
         while width == 0 or height == 0: # Handle window minimization
             width = int(glfw.get_framebuffer_size(self.window)[0])
