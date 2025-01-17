@@ -23,3 +23,20 @@ def create_command_buffers(device, command_pool, count):
         return vk.vkAllocateCommandBuffers(device, allocate_info)
     except vk.VkError as e:
         raise Exception(f"Failed to allocate command buffers: {e}")
+
+def begin_command_buffer(command_buffer):
+    begin_info = vk.VkCommandBufferBeginInfo(
+        sType=vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+    )
+
+    try:
+        vk.vkBeginCommandBuffer(command_buffer, begin_info)
+    except vk.VkError as e:
+        raise Exception(f"Failed to begin recording command buffer: {e}")
+
+
+def end_command_buffer(command_buffer):
+    try:
+        vk.vkEndCommandBuffer(command_buffer)
+    except vk.VkError as e:
+        raise Exception(f"Failed to end recording command buffer: {e}")

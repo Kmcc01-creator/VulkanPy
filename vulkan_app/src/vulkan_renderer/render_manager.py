@@ -9,6 +9,7 @@ class RenderManager:
         self.image_available_semaphores = [] # Initialize semaphores
         self.render_finished_semaphores = [] # Initialize semaphores
         self.in_flight_fences = [] # Initialize fences
+        self.init_rendering(renderer) # Initialize rendering resources
 
     def render(self, renderer):
         try:

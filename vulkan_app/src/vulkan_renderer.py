@@ -18,6 +18,8 @@ class VulkanRenderer:
 
         glfw.set_framebuffer_size_callback(window, self.framebuffer_resize_callback) # Set callback for window resize
 
+        self.render_manager.init_rendering(self) # Initialize rendering resources
+
         # Initialize world, systems, and components
         self.init_world()
 
