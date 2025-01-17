@@ -76,6 +76,7 @@ class Swapchain:
         self.descriptor_set_layout = None
 
         self.create_swapchain()
+        self.create_image_views() # Call create_image_views after creating the swapchain
         self.create_render_pass()
         self.create_pipeline()
         self.create_framebuffers()
@@ -83,11 +84,9 @@ class Swapchain:
         self.create_descriptor_pool()
         self.create_descriptor_sets()
 
-    def framebuffer_resize_callback(self, window, width, height):
-        self.recreate_swapchain()
-
 
     def create_swapchain(self):
+        # ... (Existing swapchain creation logic) ...
         surface_capabilities = vk.vkGetPhysicalDeviceSurfaceCapabilitiesKHR(self.physical_device, self.surface)
         surface_format = self.choose_surface_format()
 
@@ -133,6 +132,27 @@ class Swapchain:
             self.create_image_views()
         except vk.VkError as e:
             raise Exception(f"Failed to create swapchain: {e}")
+
+
+    def recreate_swapchain(self):
+        vk.vkDeviceWaitIdle(self.device)
+
+        # Destroy old swapchain and related resources
+        for framebuffer in self.framebuffers:
+            self.resource_manager.destroy_framebuffer(self.device, framebuffer, None) # Use resource manager to destroy framebuffer
+        self.resource_manager.destroy_swapchain(self.swapchain) # Use resource manager to destroy swapchain
+
+        # Recreate swapchain and related resources
+        self.create_swapchain()
+        self.create_image_views() # Recreate image views
+        self.create_render_pass()
+        self.create_pipeline()
+        self.create_framebuffers()
+        self.create_uniform_buffers()
+        self.create_descriptor_pool()
+        self.create_descriptor_sets()
+
+        self.renderer.create_command_buffers() # Recreate command buffers
 
     def choose_surface_format(self):
         formats = vk.vkGetPhysicalDeviceSurfaceFormatsKHR(self.physical_device, self.surface)

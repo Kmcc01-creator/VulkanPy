@@ -1,69 +1,55 @@
 import vulkan as vk
+from vulkan_engine.vulkan_engine import VulkanEngine
+from vulkan_renderer.render_manager import RenderManager
 import glfw
-
-from src.ecs.world import World
-from src.ecs.systems import RenderSystem
-from src.ecs.components import Transform, Mesh, Material
-from vulkan_engine.resource_manager import ResourceManager # Importing ResourceManager
-import numpy as np
-from src.ecs.systems import CameraSystem # Import CameraSystem
-from src.ecs.components import Camera, Transform # Import Camera and Transform
 
 class VulkanRenderer:
     def __init__(self, window):
         self.window = window
+        self.vulkan_engine = VulkanEngine(window)
+        self.render_manager = RenderManager(self.vulkan_engine)
+
+        # Swapchain creation
+        from vulkan_engine.swapchain import Swapchain
+
+        self.swapchain = Swapchain(self.vulkan_engine, self.vulkan_engine.resource_manager) # Pass vulkan_engine instead of self
+        self.framebuffers = self.swapchain.framebuffers
+        self.current_frame = 0
+
+        glfw.set_framebuffer_size_callback(window, self.framebuffer_resize_callback) # Set callback for window resize
+
+        # Initialize world, systems, and components
+        self.init_world()
+
+    def init_world(self):
+        from src.ecs.world import World
+        from src.ecs.systems import RenderSystem, CameraSystem
+        from src.ecs.components import Transform, Mesh, Material, Camera
+        import numpy as np
+
         self.world = World()
         self.render_system = RenderSystem(self)
-        self.camera_system = CameraSystem(self) # Initialize CameraSystem
-        self.world.add_system(self.camera_system) # Add CameraSystem to world
+        self.camera_system = CameraSystem(self)
+        self.world.add_system(self.camera_system)
         self.world.add_system(self.render_system)
 
         # Test entity
         entity = self.world.create_entity()
-        self.world.add_component(entity, Camera()) # Add Camera component to entity
+        self.world.add_component(entity, Camera())
         self.world.add_component(entity, Transform(position=np.array([0.0, 0.0, 0.0]), rotation=np.array([0.0, 0.0, 0.0]), scale=np.array([1.0, 1.0, 1.0])))
 
-        mesh = Mesh(vertices=[], indices=[]) # Initialize empty mesh
-        mesh.create_vertex_buffer(self, "vulkan_app/models/triangle.obj") # Load from file
-        mesh.create_vertex_buffer(self.resource_manager, "vulkan_app/models/triangle.obj") # Load from file, pass resource_manager
-        self.world.add_component(entity, mesh) # Now with vertices
+        mesh = Mesh(vertices=[], indices=[])
+        mesh.create_vertex_buffer(self.vulkan_engine.resource_manager, "vulkan_app/models/triangle.obj") # Pass resource_manager from vulkan_engine
+        self.world.add_component(entity, mesh)
         self.world.add_component(entity, Material(color=np.array([1.0, 0.0, 0.0])))
 
-
-        # Vulkan Instance creation
-        self.instance, self.enabled_layers = self.create_instance()
-
-        # Vulkan Device creation
-        self.device, self.physical_device, self.graphics_queue_family_index = self.create_device()
-
-        # Create window surface
-        self.surface = glfw.create_window_surface(self.instance, window, None, None)
-
-        # Swapchain creation (requires window surface)
-        from vulkan_engine.swapchain import Swapchain
-        self.resource_manager = ResourceManager(self)
-        self.swapchain = Swapchain(self, self.resource_manager)
-        self.swapchain_extent = self.swapchain.extent # Access extent from Swapchain object
-        self.render_pass = self.swapchain.render_pass # Access render_pass from Swapchain object
-        self.pipeline = self.swapchain.pipeline # Access pipeline from Swapchain object
-        self.pipeline_layout = self.swapchain.pipeline_layout # Access pipeline_layout from Swapchain object
-        self.framebuffers = self.swapchain.framebuffers # Access framebuffers from Swapchain object
-        self.current_frame = 0
-        self.graphics_queue = vk.vkGetDeviceQueue(self.device, self.graphics_queue_family_index, 0)
-        self.present_queue = vk.vkGetDeviceQueue(self.device, self.graphics_queue_family_index, 0) # Using graphics queue for present for now
-
-        glfw.set_framebuffer_size_callback(self.window, self.framebuffer_resize_callback)
-
-    def create_instance(self):
-        from vulkan_engine.instance import create_instance as create_vk_instance
-        return create_vk_instance()
-
-    def create_device(self):
-        from vulkan_engine.device import create_device as create_vk_device
-        return create_vk_device(self.instance, self.enabled_layers)
-
-
     def render(self):
+        self.render_manager.render(self) # Delegate rendering to RenderManager
+
+    def framebuffer_resize_callback(self, window, width, height):
+        self.vulkan_engine.recreate_swapchain() # Delegate swapchain recreation to VulkanEngine
+
+    def cleanup(self):
         try:
             image_index = vk.vkAcquireNextImageKHR(self.device, self.swapchain, 1000000000, self.image_available_semaphores[self.current_frame], vk.VK_NULL_HANDLE)
         except vk.VkErrorOutOfDateKHR:
