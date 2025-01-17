@@ -8,11 +8,14 @@ class VulkanRenderer:
         self.window = window
         self.vulkan_engine = VulkanEngine(window)
         self.render_manager = RenderManager(self.vulkan_engine)
+        from vulkan_engine.descriptors import create_uniform_buffers
+
+        self.uniform_buffers = create_uniform_buffers(self.vulkan_engine.resource_manager, self.vulkan_engine.swapchain.image_count) # Create uniform buffers
 
         # Swapchain creation
         from vulkan_engine.swapchain import Swapchain
 
-        self.swapchain = Swapchain(self.vulkan_engine, self.vulkan_engine.resource_manager) # Pass vulkan_engine instead of self
+        self.swapchain = Swapchain(self, self.vulkan_engine.resource_manager) # Pass vulkan_engine instead of self
         self.framebuffers = self.swapchain.framebuffers
         self.current_frame = 0
 

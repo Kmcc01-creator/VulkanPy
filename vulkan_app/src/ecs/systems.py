@@ -25,4 +25,4 @@ class CameraSystem:
             camera = world.get_component(entity, Camera)
             if camera:
                 view_matrix = lookAt(camera.position, camera.target, camera.up)
-                # TODO: Update uniform buffer with view matrix
+                renderer.uniform_buffers[renderer.current_frame].update(view_matrix) # Update uniform buffer
