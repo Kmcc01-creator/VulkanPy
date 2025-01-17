@@ -45,7 +45,6 @@ class VulkanRenderer:
         self.create_command_pool() # New: create command pool
 
         self.current_frame = 0
-        self.render_manager.init_rendering(self) # Initialize rendering resources
         self.graphics_queue = vk.vkGetDeviceQueue(self.device, self.graphics_queue_family_index, 0)
         self.present_queue = vk.vkGetDeviceQueue(self.device, self.graphics_queue_family_index, 0) # Using graphics queue for present for now
 

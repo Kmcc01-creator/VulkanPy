@@ -41,6 +41,11 @@ class VulkanEngine:
                 return i
         return None
 
+    def recreate_swapchain(self):
+        self.swapchain.recreate_swapchain()
+        self.render_manager.create_command_buffers(self.swapchain.framebuffers)
+
     def cleanup(self):
         self.resource_manager.cleanup()
+
 
