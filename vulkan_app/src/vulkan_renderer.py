@@ -1,5 +1,6 @@
 import vulkan as vk
 import logging
+from typing import Any, List, Tuple
 from vulkan_engine.vulkan_engine import VulkanEngine
 from vulkan_renderer.render_manager import RenderManager
 from src.ecs.world import World
@@ -13,7 +14,7 @@ import glfw
 logger = logging.getLogger(__name__)
 
 class VulkanRenderer:
-    def __init__(self, window):
+    def __init__(self, window: Any) -> None:
         self.window = window
         logger.info("Initializing VulkanRenderer")
         try:
@@ -21,6 +22,7 @@ class VulkanRenderer:
             self.shader_manager = ShaderManager(self.vulkan_engine.device)
             self.render_manager = RenderManager(self.vulkan_engine, self.shader_manager)
             self.current_frame = 0
+            self.world: World
 
             glfw.set_framebuffer_size_callback(window, self.framebuffer_resize_callback)
 
@@ -31,11 +33,15 @@ class VulkanRenderer:
             logger.error(f"Failed to initialize VulkanRenderer: {str(e)}")
             raise
 
-    def load_shaders(self):
-        self.shader_manager.load_shader('default', 'shaders/default.vert', 'shaders/default.frag')
-        self.shader_manager.load_shader('pbr', 'shaders/pbr.vert', 'shaders/pbr.frag')
+    def load_shaders(self) -> None:
+        try:
+            self.shader_manager.load_shader('default', 'shaders/default.vert', 'shaders/default.frag')
+            self.shader_manager.load_shader('pbr', 'shaders/pbr.vert', 'shaders/pbr.frag')
+        except Exception as e:
+            logger.error(f"Failed to load shaders: {str(e)}")
+            raise
 
-    def init_world(self):
+    def init_world(self) -> None:
         self.world = World()
         self.render_system = RenderSystem(self)
         self.camera_system = CameraSystem(self)
@@ -59,13 +65,13 @@ class VulkanRenderer:
         self.create_mesh_entity(MeshType.CYLINDER, np.array([-2.0, 0.0, 0.0]))
 
         # Custom mesh
-        def custom_function(u, v):
+        def custom_function(u: float, v: float) -> float:
             return np.sin(u) * np.cos(v)
         
         custom_mesh = MeshRenderer.from_function(custom_function, (-np.pi, np.pi), (-np.pi, np.pi), 32)
         self.create_mesh_entity(MeshType.CUSTOM, np.array([0.0, 2.0, 0.0]), custom_mesh)
 
-    def create_mesh_entity(self, mesh_type, position, custom_mesh=None):
+    def create_mesh_entity(self, mesh_type: MeshType, position: np.ndarray, custom_mesh: MeshRenderer = None) -> None:
         entity = self.world.create_entity()
         mesh_renderer = custom_mesh if custom_mesh else MeshRenderer(mesh_type)
         mesh = Mesh(mesh_renderer=mesh_renderer)
@@ -75,16 +81,16 @@ class VulkanRenderer:
         self.world.add_component(entity, Transform(position=position, rotation=np.array([0.0, 0.0, 0.0]), scale=np.array([1.0, 1.0, 1.0])))
         self.world.add_component(entity, Shader(vertex_shader='pbr', fragment_shader='pbr'))
 
-    def render(self):
+    def render(self) -> None:
         self.render_manager.render(self.world)
 
-    def framebuffer_resize_callback(self, window, width, height):
+    def framebuffer_resize_callback(self, window: Any, width: int, height: int) -> None:
         self.vulkan_engine.recreate_swapchain()
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         self.vulkan_engine.cleanup()
 
-    def record_command_buffer(self, command_buffer, image_index):
+    def record_command_buffer(self, command_buffer: vk.VkCommandBuffer, image_index: int) -> None:
         begin_info = vk.VkCommandBufferBeginInfo(
             sType=vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         )
@@ -92,7 +98,8 @@ class VulkanRenderer:
         try:
             vk.vkBeginCommandBuffer(command_buffer, begin_info)
         except vk.VkError as e:
-            raise Exception(f"Failed to begin recording command buffer: {e}")
+            logger.error(f"Failed to begin recording command buffer: {e}")
+            raise
 
         render_pass_begin_info = vk.VkRenderPassBeginInfo(
             sType=vk.VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -126,65 +133,15 @@ class VulkanRenderer:
         )
         vk.vkCmdSetScissor(command_buffer, 0, 1, [scissor])
 
-        self.render_system.render(command_buffer, self.world) # Delegate rendering to RenderSystem
+        self.render_system.render(command_buffer, self.world)
         vk.vkCmdEndRenderPass(command_buffer)
 
         try:
             vk.vkEndCommandBuffer(command_buffer)
         except vk.VkError as e:
-            raise Exception(f"Failed to end recording command buffer: {e}")
+            logger.error(f"Failed to end recording command buffer: {e}")
+            raise
 
-        pool_sizes = []
-        pool_sizes.append(vk.VkDescriptorPoolSize(type=vk.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, descriptorCount=1))
-
-        pool_create_info = vk.VkDescriptorPoolCreateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-            maxSets=1,
-            poolSizeCount=len(pool_sizes),
-            pPoolSizes=pool_sizes
-        )
-
-        self.descriptor_pool = vk.vkCreateDescriptorPool(self.device, pool_create_info, None)
-
-
-
-        allocate_info = vk.VkCommandBufferAllocateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-            level=vk.VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-            commandPool=self.command_pool,
-            commandBufferCount=1,
-        )
-        command_buffer = vk.vkAllocateCommandBuffers(self.device, allocate_info)[0]
-
-        begin_info = vk.VkCommandBufferBeginInfo(
-            sType=vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-            flags=vk.VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-        )
-    # Removed copy_buffer method
-
-
-        vk.vkEndCommandBuffer(command_buffer)
-
-        submit_info = vk.VkSubmitInfo(
-            sType=vk.VK_STRUCTURE_TYPE_SUBMIT_INFO,
-            commandBufferCount=1,
-            pCommandBuffers=[command_buffer],
-        )
-        vk.vkQueueSubmit(self.graphics_queue, 1, [submit_info], vk.VK_NULL_HANDLE)
-        vk.vkQueueWaitIdle(self.graphics_queue)
-
-        vk.vkFreeCommandBuffers(self.device, self.command_pool, 1, [command_buffer])
-
-        for fence in self.in_flight_fences:
-            vk.vkWaitForFences(self.device, 1, [fence], vk.VK_TRUE, 1000000000) # Wait for fence before destroying it
-            vk.vkDestroyFence(self.device, fence, None)
-
-        for semaphore in self.image_available_semaphores:
-            vk.vkDestroySemaphore(self.device, semaphore, None)
-
-        for semaphore in self.render_finished_semaphores:
-            vk.vkDestroySemaphore(self.device, semaphore, None)
-
-
-    def cleanup(self):
+    def cleanup(self) -> None:
+        logger.info("Cleaning up VulkanRenderer")
         self.vulkan_engine.cleanup()

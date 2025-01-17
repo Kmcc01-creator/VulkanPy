@@ -1,20 +1,23 @@
 import vulkan as vk
 import logging
+from typing import List, Tuple
 from vulkan_engine.command_buffer import create_command_pool, create_command_buffers
 from vulkan_engine.synchronization import create_sync_objects
 from src.ecs.components import Mesh, Transform
+from src.ecs.world import World
 
 logger = logging.getLogger(__name__)
 
 class RenderManager:
-    def __init__(self, vulkan_engine):
+    def __init__(self, vulkan_engine: 'VulkanEngine', shader_manager: 'ShaderManager') -> None:
         self.vulkan_engine = vulkan_engine
+        self.shader_manager = shader_manager
         self.device = vulkan_engine.device
-        self.command_pool = None
-        self.command_buffers = []
-        self.image_available_semaphores = []
-        self.render_finished_semaphores = []
-        self.in_flight_fences = []
+        self.command_pool: vk.VkCommandPool = None
+        self.command_buffers: List[vk.VkCommandBuffer] = []
+        self.image_available_semaphores: List[vk.VkSemaphore] = []
+        self.render_finished_semaphores: List[vk.VkSemaphore] = []
+        self.in_flight_fences: List[vk.VkFence] = []
         self.current_frame = 0
         logger.info("Initializing RenderManager")
         try:
@@ -24,24 +27,24 @@ class RenderManager:
             logger.error(f"Failed to initialize RenderManager: {str(e)}")
             raise
 
-    def init_rendering(self):
+    def init_rendering(self) -> None:
         self.create_command_pool()
         self.create_command_buffers()
         self.create_sync_objects()
 
-    def create_command_pool(self):
+    def create_command_pool(self) -> None:
         self.command_pool = create_command_pool(self.device, self.vulkan_engine.graphics_queue_family_index)
         self.vulkan_engine.resource_manager.add_resource(self.command_pool, "command_pool", self.vulkan_engine.resource_manager.destroy_command_pool)
 
-    def create_command_buffers(self):
+    def create_command_buffers(self) -> None:
         self.command_buffers = create_command_buffers(self.device, self.command_pool, len(self.vulkan_engine.swapchain.framebuffers))
 
-    def create_sync_objects(self):
+    def create_sync_objects(self) -> None:
         self.image_available_semaphores, self.render_finished_semaphores, self.in_flight_fences = create_sync_objects(
             self.device, len(self.vulkan_engine.swapchain.swapchain_images), self.vulkan_engine.resource_manager
         )
 
-    def render(self, world):
+    def render(self, world: World) -> None:
         try:
             image_index = self.acquire_next_image()
             self.wait_for_fences()
@@ -53,11 +56,12 @@ class RenderManager:
         except vk.VkErrorOutOfDateKHR:
             self.vulkan_engine.recreate_swapchain()
         except vk.VkError as e:
+            logger.error(f"Render failed: {str(e)}")
             raise RuntimeError(f"Render failed: {str(e)}")
 
         self.current_frame = (self.current_frame + 1) % len(self.vulkan_engine.swapchain.swapchain_images)
 
-    def acquire_next_image(self):
+    def acquire_next_image(self) -> int:
         return vk.vkAcquireNextImageKHR(
             self.device,
             self.vulkan_engine.swapchain.swapchain,
@@ -66,16 +70,16 @@ class RenderManager:
             vk.VK_NULL_HANDLE
         )
 
-    def wait_for_fences(self):
+    def wait_for_fences(self) -> None:
         vk.vkWaitForFences(self.device, 1, [self.in_flight_fences[self.current_frame]], vk.VK_TRUE, vk.UINT64_MAX)
 
-    def reset_fences(self):
+    def reset_fences(self) -> None:
         vk.vkResetFences(self.device, 1, [self.in_flight_fences[self.current_frame]])
 
-    def reset_command_buffer(self):
+    def reset_command_buffer(self) -> None:
         vk.vkResetCommandBuffer(self.command_buffers[self.current_frame], 0)
 
-    def submit_command_buffer(self, image_index):
+    def submit_command_buffer(self, image_index: int) -> None:
         submit_info = vk.VkSubmitInfo(
             sType=vk.VK_STRUCTURE_TYPE_SUBMIT_INFO,
             waitSemaphoreCount=1,
@@ -89,7 +93,7 @@ class RenderManager:
 
         vk.vkQueueSubmit(self.vulkan_engine.graphics_queue, 1, [submit_info], self.in_flight_fences[self.current_frame])
 
-    def present_image(self, image_index):
+    def present_image(self, image_index: int) -> None:
         present_info = vk.VkPresentInfoKHR(
             sType=vk.VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
             waitSemaphoreCount=1,
@@ -104,7 +108,7 @@ class RenderManager:
         except vk.VkErrorOutOfDateKHR:
             self.vulkan_engine.recreate_swapchain()
 
-    def record_command_buffer(self, command_buffer, image_index, world):
+    def record_command_buffer(self, command_buffer: vk.VkCommandBuffer, image_index: int, world: World) -> None:
         begin_info = vk.VkCommandBufferBeginInfo(
             sType=vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         )
@@ -145,8 +149,21 @@ class RenderManager:
         # Render entities in the world
         for entity, (mesh, transform) in world.get_components(Mesh, Transform):
             vk.vkCmdBindVertexBuffers(command_buffer, 0, 1, [mesh.vertex_buffer], [0])
-            vk.vkCmdDraw(command_buffer, mesh.vertex_count, 1, 0, 0)
+            vk.vkCmdBindIndexBuffer(command_buffer, mesh.index_buffer, 0, vk.VK_INDEX_TYPE_UINT32)
+            vk.vkCmdDrawIndexed(command_buffer, mesh.index_count, 1, 0, 0, 0)
 
         vk.vkCmdEndRenderPass(command_buffer)
         vk.vkEndCommandBuffer(command_buffer)
+
+    def cleanup(self) -> None:
+        logger.info("Cleaning up RenderManager resources")
+        vk.vkDeviceWaitIdle(self.device)
+        
+        for fence in self.in_flight_fences:
+            vk.vkDestroyFence(self.device, fence, None)
+        
+        for semaphore in self.image_available_semaphores + self.render_finished_semaphores:
+            vk.vkDestroySemaphore(self.device, semaphore, None)
+        
+        vk.vkDestroyCommandPool(self.device, self.command_pool, None)
 

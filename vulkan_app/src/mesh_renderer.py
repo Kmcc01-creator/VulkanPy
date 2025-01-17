@@ -1,7 +1,7 @@
 import numpy as np
 from enum import Enum
 from dataclasses import dataclass
-from typing import List, Callable
+from typing import List, Callable, Tuple
 
 class MeshType(Enum):
     SPHERE = 1
@@ -22,7 +22,7 @@ class MeshRenderer:
         self.vertices: List[Vertex] = []
         self.indices: List[int] = []
 
-    def generate_mesh(self):
+    def generate_mesh(self) -> None:
         if self.mesh_type == MeshType.SPHERE:
             self._generate_sphere()
         elif self.mesh_type == MeshType.CUBE:
@@ -32,14 +32,18 @@ class MeshRenderer:
         else:
             raise ValueError("Unsupported mesh type")
 
-    def _generate_sphere(self):
+    def _generate_sphere(self) -> None:
         for i in range(self.resolution + 1):
             theta = i * np.pi / self.resolution
+            sin_theta = np.sin(theta)
+            cos_theta = np.cos(theta)
             for j in range(self.resolution + 1):
                 phi = j * 2 * np.pi / self.resolution
-                x = np.sin(theta) * np.cos(phi)
-                y = np.cos(theta)
-                z = np.sin(theta) * np.sin(phi)
+                sin_phi = np.sin(phi)
+                cos_phi = np.cos(phi)
+                x = sin_theta * cos_phi
+                y = cos_theta
+                z = sin_theta * sin_phi
                 position = np.array([x, y, z])
                 normal = position / np.linalg.norm(position)
                 uv = np.array([j / self.resolution, i / self.resolution])
@@ -49,10 +53,9 @@ class MeshRenderer:
             for j in range(self.resolution):
                 first = i * (self.resolution + 1) + j
                 second = first + self.resolution + 1
-                self.indices.extend([first, second, first + 1])
-                self.indices.extend([second, second + 1, first + 1])
+                self.indices.extend([first, second, first + 1, second, second + 1, first + 1])
 
-    def _generate_cube(self):
+    def _generate_cube(self) -> None:
         vertices = [
             (-1, -1, -1), (1, -1, -1), (1, 1, -1), (-1, 1, -1),
             (-1, -1, 1), (1, -1, 1), (1, 1, 1), (-1, 1, 1)
@@ -75,21 +78,20 @@ class MeshRenderer:
             base = len(self.vertices) - 4
             self.indices.extend([base, base + 1, base + 2, base, base + 2, base + 3])
 
-    def _generate_cylinder(self):
+    def _generate_cylinder(self) -> None:
         for i in range(self.resolution + 1):
             theta = i * 2 * np.pi / self.resolution
-            x = np.cos(theta)
-            z = np.sin(theta)
+            cos_theta = np.cos(theta)
+            sin_theta = np.sin(theta)
             for y in [-1, 1]:
-                position = np.array([x, y, z])
-                normal = np.array([x, 0, z])
+                position = np.array([cos_theta, y, sin_theta])
+                normal = np.array([cos_theta, 0, sin_theta])
                 uv = np.array([i / self.resolution, (y + 1) / 2])
                 self.vertices.append(Vertex(position, normal, uv))
 
         for i in range(self.resolution):
             base = i * 2
-            self.indices.extend([base, base + 1, base + 2])
-            self.indices.extend([base + 1, base + 3, base + 2])
+            self.indices.extend([base, base + 1, base + 2, base + 1, base + 3, base + 2])
 
         # Add top and bottom caps
         for y in [-1, 1]:
@@ -97,11 +99,11 @@ class MeshRenderer:
             self.vertices.append(Vertex(np.array([0, y, 0]), np.array([0, y, 0]), np.array([0.5, 0.5])))
             for i in range(self.resolution):
                 theta = i * 2 * np.pi / self.resolution
-                x = np.cos(theta)
-                z = np.sin(theta)
-                position = np.array([x, y, z])
+                cos_theta = np.cos(theta)
+                sin_theta = np.sin(theta)
+                position = np.array([cos_theta, y, sin_theta])
                 normal = np.array([0, y, 0])
-                uv = np.array([(x + 1) / 2, (z + 1) / 2])
+                uv = np.array([(cos_theta + 1) / 2, (sin_theta + 1) / 2])
                 self.vertices.append(Vertex(position, normal, uv))
                 if i > 0:
                     if y > 0:
@@ -110,7 +112,7 @@ class MeshRenderer:
                         self.indices.extend([center, center + i + 1, center + i])
 
     @classmethod
-    def from_function(cls, func: Callable[[float, float], float], u_range: tuple, v_range: tuple, resolution: int):
+    def from_function(cls, func: Callable[[float, float], float], u_range: Tuple[float, float], v_range: Tuple[float, float], resolution: int):
         mesh = cls(MeshType.CUSTOM, resolution)
         u_min, u_max = u_range
         v_min, v_max = v_range
@@ -137,13 +139,12 @@ class MeshRenderer:
             for j in range(resolution):
                 first = i * (resolution + 1) + j
                 second = first + resolution + 1
-                mesh.indices.extend([first, second, first + 1])
-                mesh.indices.extend([second, second + 1, first + 1])
+                mesh.indices.extend([first, second, first + 1, second, second + 1, first + 1])
 
         return mesh
 
-    def get_vertex_data(self):
+    def get_vertex_data(self) -> np.ndarray:
         return np.array([np.concatenate((v.position, v.normal, v.uv)) for v in self.vertices], dtype=np.float32)
 
-    def get_index_data(self):
+    def get_index_data(self) -> np.ndarray:
         return np.array(self.indices, dtype=np.uint32)
