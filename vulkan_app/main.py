@@ -1,3 +1,4 @@
+import glfw # Import glfw
 from src.vulkan_renderer import VulkanRenderer
 from src.window_manager import WindowManager
 from src.input_handler import InputHandler
