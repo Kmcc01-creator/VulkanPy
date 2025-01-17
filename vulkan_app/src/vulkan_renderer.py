@@ -28,6 +28,10 @@ class VulkanRenderer:
         self.graphics_queue = vk.vkGetDeviceQueue(self.device, self.graphics_queue_family_index, 0)
         self.present_queue = vk.vkGetDeviceQueue(self.device, self.graphics_queue_family_index, 0) # Using graphics queue for present for now
 
+        glfw.set_framebuffer_size_callback(self.window, self.framebuffer_resize_callback)
+
+    def framebuffer_resize_callback(self, window, width, height):
+        self.recreate_swapchain()
 
     def create_instance(self):
         from vulkan_engine.instance import create_instance as create_vk_instance

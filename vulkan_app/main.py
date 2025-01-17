@@ -22,9 +22,9 @@ def main():
         input_handler.process_input()
         renderer.render()
 
-        glfw.swap_buffers(window) # Example using GLFW
         glfw.poll_events()       # Example using GLFW
 
+    renderer.cleanup()
     glfw.terminate()             # Example using GLFW
 
 if __name__ == "__main__":
