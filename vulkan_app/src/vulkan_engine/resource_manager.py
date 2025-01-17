@@ -15,6 +15,10 @@ class ResourceManager:
         self.memory_allocator = MemoryAllocator(self.physical_device, self.device)
         self.resource_cache = {}
 
+    def create_graphics_pipeline(self, device, swapchain_extent, render_pass, descriptor_set_layout):
+        # ... (Existing pipeline creation logic from pipeline.py) ...
+        self.shader_modules = {} # Store shader modules
+
     def __enter__(self):
         return self
 
@@ -94,6 +98,16 @@ class ResourceManager:
         # Staging buffer will be automatically cleaned up when no longer needed
         return vertex_buffer
 
+    def create_mesh(self, mesh_renderer):
+        mesh_renderer.generate_mesh()
+        vertices = mesh_renderer.get_vertex_data()
+        indices = mesh_renderer.get_index_data()
+
+        vertex_buffer = self.create_vertex_buffer(vertices)
+        index_buffer, index_buffer_memory, index_count = self.create_index_buffer(indices) # Create index buffer
+
+        return vertex_buffer, index_buffer, index_count # Return index buffer and count
+
     def copy_buffer(self, src_buffer, dst_buffer, size):
         with self.begin_single_time_commands() as command_buffer:
             copy_region = vk.VkBufferCopy(srcOffset=0, dstOffset=0, size=size)
@@ -113,3 +127,20 @@ class ResourceManager:
 
         vk.vkQueueSubmit(self.renderer.graphics_queue, 1, [submit_info], vk.VK_NULL_HANDLE)
         vk.vkQueueWaitIdle(self.renderer.graphics_queue)
+
+    def create_shader_module(self, code):
+        create_info = vk.VkShaderModuleCreateInfo(
+            sType=vk.VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+            codeSize=len(code),
+            pCode=code
+        )
+        try:
+            module = vk.vkCreateShaderModule(self.device, create_info, None)
+            self.add_resource(module, "shader_module") # Track shader module for cleanup
+            return module
+        except vk.VkError as e:
+            logger.error(f"Failed to create shader module: {str(e)}")
+            raise
+
+    def destroy_shader_module(self, module):
+        vk.vkDestroyShaderModule(self.device, module, None)

@@ -6,8 +6,9 @@ from typing import Dict, Any
 logger = logging.getLogger(__name__)
 
 class ShaderManager:
-    def __init__(self, device: vk.VkDevice):
-        self.device = device
+    def __init__(self, resource_manager):
+        self.resource_manager = resource_manager
+        self.device = resource_manager.device # Access device through resource manager
         self.shaders: Dict[str, Dict[str, vk.VkShaderModule]] = {}
 
     def load_shader(self, name: str, vertex_path: str, fragment_path: str) -> None:
@@ -39,7 +40,8 @@ class ShaderManager:
             pCode=code
         )
         try:
-            return vk.vkCreateShaderModule(self.device, create_info, None)
+            module = self.resource_manager.create_shader_module(code) # Use resource manager
+            return module
         except vk.VkError as e:
             logger.error(f"Failed to create shader module: {str(e)}")
             raise
@@ -52,7 +54,5 @@ class ShaderManager:
 
     def cleanup(self) -> None:
         logger.info("Cleaning up ShaderManager resources")
-        for shader in self.shaders.values():
-            vk.vkDestroyShaderModule(self.device, shader['vertex'], None)
-            vk.vkDestroyShaderModule(self.device, shader['fragment'], None)
+        # Shader modules are now destroyed by the resource manager
         self.shaders.clear()

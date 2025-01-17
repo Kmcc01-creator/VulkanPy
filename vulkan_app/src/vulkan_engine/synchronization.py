@@ -1,6 +1,6 @@
 import vulkan as vk
 
-def create_sync_objects(device, num_images, resource_manager):
+def create_sync_objects(resource_manager, num_images): # Take resource_manager as argument
     semaphore_create_info = vk.VkSemaphoreCreateInfo(
         sType=vk.VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO
     )

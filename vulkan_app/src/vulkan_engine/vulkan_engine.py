@@ -32,7 +32,7 @@ class VulkanEngine:
             self.instance, self.enabled_layers = self.create_instance()
             self.device, self.physical_device, self.graphics_queue_family_index = self.create_device()
             self.surface = self.create_surface()
-            self.resource_manager = ResourceManager(self)
+            self.resource_manager = ResourceManager(self.device)
             self.setup_queues()
             self.swapchain = Swapchain(self, self.resource_manager)
             self.create_descriptor_set_layout()

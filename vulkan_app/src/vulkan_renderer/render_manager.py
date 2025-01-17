@@ -42,9 +42,7 @@ class RenderManager:
         self.command_buffers = create_command_buffers(self.device, self.command_pool, len(self.vulkan_engine.swapchain.framebuffers))
 
     def create_sync_objects(self) -> None:
-        self.image_available_semaphores, self.render_finished_semaphores, self.in_flight_fences = create_sync_objects(
-            self.device, len(self.vulkan_engine.swapchain.swapchain_images), self.vulkan_engine.resource_manager
-        )
+        self.image_available_semaphores, self.render_finished_semaphores, self.in_flight_fences = self.vulkan_engine.resource_manager.create_sync_objects(len(self.vulkan_engine.swapchain.swapchain_images))
 
     def render(self, world: World) -> None:
         try:

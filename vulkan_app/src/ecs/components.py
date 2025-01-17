@@ -22,12 +22,7 @@ class Mesh:
     index_count: int = 0
 
     def create_buffers(self, resource_manager):
-        self.mesh_renderer.generate_mesh()
-        vertices = self.mesh_renderer.get_vertex_data()
-        indices = self.mesh_renderer.get_index_data()
-        
-        self.vertex_buffer, self.vertex_buffer_memory, self.vertex_count = resource_manager.create_vertex_buffer(vertices)
-        self.index_buffer, self.index_buffer_memory, self.index_count = resource_manager.create_index_buffer(indices)
+        self.vertex_buffer, self.index_buffer, self.index_count = resource_manager.create_mesh(self.mesh_renderer)
 
 @dataclass
 class Material:
