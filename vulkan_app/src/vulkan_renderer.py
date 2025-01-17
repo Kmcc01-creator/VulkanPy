@@ -30,6 +30,7 @@ class VulkanRenderer:
             logger.info("VulkanRenderer initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize VulkanRenderer: {str(e)}")
+            self.cleanup()
             raise
 
     def load_shaders(self) -> None:
@@ -91,13 +92,23 @@ class VulkanRenderer:
         self.world.add_component(entity, Shader(vertex_shader='pbr', fragment_shader='pbr'))
 
     def render(self) -> None:
-        self.render_manager.render(self.world)
+        try:
+            self.render_manager.render(self.world)
+        except vk.VkError as e:
+            logger.error(f"Vulkan error during rendering: {str(e)}")
+            self.vulkan_engine.recreate_swapchain()
+        except Exception as e:
+            logger.error(f"Unexpected error during rendering: {str(e)}")
+            raise
 
     def framebuffer_resize_callback(self, window: Any, width: int, height: int) -> None:
         self.vulkan_engine.recreate_swapchain()
 
     def cleanup(self) -> None:
         logger.info("Cleaning up VulkanRenderer")
-        self.shader_manager.cleanup()
-        self.render_manager.cleanup()
-        self.vulkan_engine.cleanup()
+        if hasattr(self, 'shader_manager'):
+            self.shader_manager.cleanup()
+        if hasattr(self, 'render_manager'):
+            self.render_manager.cleanup()
+        if hasattr(self, 'vulkan_engine'):
+            self.vulkan_engine.cleanup()
