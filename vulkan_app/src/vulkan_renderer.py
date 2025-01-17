@@ -18,6 +18,8 @@ class VulkanRenderer:
         self.swapchain, self.swapchain_extent = self.create_swapchain() # Getting swapchain extent
         self.render_pass = self.create_render_pass()
         self.pipeline, self.pipeline_layout, self.descriptor_set_layout = self.create_pipeline() # Getting pipeline, layout, and descriptor set layout
+        self.create_descriptor_pool()
+        self.create_descriptor_sets()
         self.framebuffers = self.create_framebuffers()
         self.create_command_pool() # New: create command pool
         self.create_command_buffers() # New: create command buffers
@@ -170,6 +172,7 @@ class VulkanRenderer:
 
         vk.vkCmdBeginRenderPass(command_buffer, render_pass_begin_info, vk.VK_SUBPASS_CONTENTS_INLINE)
         vk.vkCmdBindPipeline(command_buffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, self.pipeline)
+        vk.vkCmdBindDescriptorSets(command_buffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, self.pipeline_layout, 0, 1, self.descriptor_sets, 0, None)
 
         viewport = vk.VkViewport(
             x=0.0,
