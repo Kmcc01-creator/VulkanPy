@@ -1,6 +1,10 @@
 import vulkan as vk
 from vulkan_engine.vulkan_engine import VulkanEngine
 from vulkan_renderer.render_manager import RenderManager
+from src.ecs.world import World
+from src.ecs.systems import RenderSystem, CameraSystem
+from src.ecs.components import Transform, Mesh, Material, Camera
+import numpy as np
 import glfw
 
 class VulkanRenderer:
@@ -8,56 +12,37 @@ class VulkanRenderer:
         self.window = window
         self.vulkan_engine = VulkanEngine(window)
         self.render_manager = RenderManager(self.vulkan_engine)
-
-        # Swapchain creation
-        from vulkan_engine.swapchain import Swapchain
-
-        self.swapchain = Swapchain(self.vulkan_engine, self.vulkan_engine.resource_manager) # Pass vulkan_engine instead of self
-        self.framebuffers = self.swapchain.framebuffers
         self.current_frame = 0
 
-        glfw.set_framebuffer_size_callback(window, self.framebuffer_resize_callback) # Set callback for window resize
+        glfw.set_framebuffer_size_callback(window, self.framebuffer_resize_callback)
 
-        self.render_manager.init_rendering(self) # Initialize rendering resources
-
-        # Initialize world, systems, and components
         self.init_world()
 
     def init_world(self):
-        from src.ecs.world import World
-        from src.ecs.systems import RenderSystem, CameraSystem
-        from src.ecs.components import Transform, Mesh, Material, Camera
-        import numpy as np
-
         self.world = World()
         self.render_system = RenderSystem(self)
         self.camera_system = CameraSystem(self)
         self.world.add_system(self.camera_system)
         self.world.add_system(self.render_system)
 
-        # Test entity
         entity = self.world.create_entity()
-        self.camera_component = Camera() # Store camera component
+        self.camera_component = Camera()
         self.world.add_component(entity, self.camera_component)
         self.world.add_component(entity, Transform(position=np.array([0.0, 0.0, 0.0]), rotation=np.array([0.0, 0.0, 0.0]), scale=np.array([1.0, 1.0, 1.0])))
 
         mesh = Mesh(vertices=[], indices=[])
-        mesh.create_vertex_buffer(self.vulkan_engine.resource_manager, "vulkan_app/models/triangle.obj") # Pass resource_manager from vulkan_engine
+        mesh.create_vertex_buffer(self.vulkan_engine.resource_manager, "vulkan_app/models/triangle.obj")
         self.world.add_component(entity, mesh)
         self.world.add_component(entity, Material(color=np.array([1.0, 0.0, 0.0])))
 
     def render(self):
-        self.render_manager.render(self) # Delegate rendering to RenderManager
+        self.render_manager.render(self.world)
 
     def framebuffer_resize_callback(self, window, width, height):
-        self.vulkan_engine.recreate_swapchain() # Delegate swapchain recreation to VulkanEngine
+        self.vulkan_engine.recreate_swapchain()
 
     def cleanup(self):
-        try:
-            image_index = vk.vkAcquireNextImageKHR(self.device, self.swapchain, 1000000000, self.image_available_semaphores[self.current_frame], vk.VK_NULL_HANDLE)
-        except vk.VkErrorOutOfDateKHR:
-            self.recreate_swapchain()
-            return
+        self.vulkan_engine.cleanup()
 
         vk.vkResetFences(self.device, 1, [self.in_flight_fences[self.current_frame]])
 
