@@ -88,9 +88,9 @@ class VulkanRenderer:
 
         # Recreate swapchain and related resources
         self.swapchain, self.swapchain_extent = self.create_swapchain()
-        self.render_pass = self.create_render_pass()
         self.framebuffers = self.create_framebuffers()
         self.pipeline, self.pipeline_layout = self.create_pipeline() # Recreate pipeline as well
+        self.create_vertex_buffer() # Recreate vertex buffer
 
 
         # Recreate command buffers
@@ -220,25 +220,6 @@ class VulkanRenderer:
         vk.vkDestroyBuffer(self.device, staging_buffer, None)
         vk.vkFreeMemory(self.device, staging_buffer_memory, None)
 
-        staging_buffer, staging_buffer_memory = self.create_buffer(
-            buffer_size, vk.VK_BUFFER_USAGE_TRANSFER_SRC_BIT, vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-        )
-
-        data_ptr = vk.vkMapMemory(self.device, staging_buffer_memory, 0, buffer_size, 0)
-        for i, vertex in enumerate(vertices):
-            byte_offset = i * 2 * 4 * 3
-            vk.ffi.memmove(data_ptr + byte_offset, vertex.pos.buffer_info()[0], 3 * 4) # Copy position data
-            vk.ffi.memmove(data_ptr + byte_offset + 3 * 4, vertex.color.buffer_info()[0], 3 * 4) # Copy color data
-        vk.vkUnmapMemory(self.device, staging_buffer_memory)
-
-        self.vertex_buffer, self.vertex_buffer_memory = self.create_buffer(
-            buffer_size, vk.VK_BUFFER_USAGE_TRANSFER_DST_BIT | vk.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, vk.VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-        )
-
-        self.copy_buffer(staging_buffer, self.vertex_buffer, buffer_size)
-
-        vk.vkDestroyBuffer(self.device, staging_buffer, None)
-        vk.vkFreeMemory(self.device, staging_buffer_memory, None)
 
     def create_buffer(self, size, usage, properties):
         from vulkan_engine.buffer import create_buffer as create_vk_buffer
