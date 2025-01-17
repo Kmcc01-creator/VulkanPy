@@ -41,16 +41,41 @@ def create_pipeline(device, swapchain_extent, render_pass): # Added render_pass
 
     shader_stages = [vert_shader_stage_info, frag_shader_stage_info]
 
+    # Create descriptor set layout
+    bindings = []
+    # MVP matrix uniform buffer
+    bindings.append(
+        vk.VkDescriptorSetLayoutBinding(
+            binding=0,
+            descriptorType=vk.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            descriptorCount=1,
+            stageFlags=vk.VK_SHADER_STAGE_VERTEX_BIT,
+        )
+    )
+
+    descriptor_set_layout_info = vk.VkDescriptorSetLayoutCreateInfo(
+        sType=vk.VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+        bindingCount=len(bindings),
+        pBindings=bindings,
+    )
+
+    descriptor_set_layout = vk.vkCreateDescriptorSetLayout(device, descriptor_set_layout_info, None)
+
     # ... (Pipeline layout create info) ...
+    push_constant_range = vk.VkPushConstantRange(
+        stageFlags=vk.VK_SHADER_STAGE_VERTEX_BIT,
+        offset=0,
+        size=4 * 4 * 4, # mat4
+    )
+
     pipeline_layout_create_info = vk.VkPipelineLayoutCreateInfo(
         sType=vk.VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-        setLayoutCount=0, # Placeholder for descriptor set layouts
-        pSetLayouts=None, # Placeholder for descriptor set layouts
-        pushConstantRangeCount=0, # Placeholder for push constant ranges
-        pPushConstantRanges=None, # Placeholder for push constant ranges
+        setLayoutCount=1,
+        pSetLayouts=[descriptor_set_layout],
+        pushConstantRangeCount=1,
+        pPushConstantRanges=[push_constant_range],
 
     )
-    from src.vertex import Vertex
     vertex_input_bindings = Vertex.get_binding_descriptions()
     vertex_input_attributes = Vertex.get_attribute_descriptions()
 
@@ -149,5 +174,9 @@ def create_pipeline(device, swapchain_extent, render_pass): # Added render_pass
         raise Exception(f"Failed to create graphics pipeline: {e}")
 
     # ... (Destroy shader modules) ...
+    vk.vkDestroyShaderModule(device, vert_shader_module, None)
+    vk.vkDestroyShaderModule(device, frag_shader_module, None)
+
+    return graphics_pipeline, pipeline_layout, descriptor_set_layout # Returning descriptor set layout
     vk.vkDestroyShaderModule(device, vert_shader_module, None)
     vk.vkDestroyShaderModule(device, frag_shader_module, None)
