@@ -7,6 +7,7 @@ from src.ecs.components import Transform, Mesh, Material
 from vulkan_engine.resource_manager import ResourceManager # Importing ResourceManager
 import numpy as np
 from src.ecs.systems import CameraSystem # Import CameraSystem
+from src.ecs.components import Camera, Transform # Import Camera and Transform
 
 class VulkanRenderer:
     def __init__(self, window):

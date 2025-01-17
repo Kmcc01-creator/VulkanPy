@@ -13,6 +13,8 @@ class RenderSystem:
                 vk.vkCmdBindVertexBuffers(command_buffer, 0, 1, [mesh.vertex_buffer], [0]) # Assuming mesh.vertex_buffer exists
                 vk.vkCmdDraw(command_buffer, mesh.vertex_count, 1, 0, 0) # Assuming mesh.vertex_count exists
 
+from src.ecs.components import Camera # Import Camera component
+
 class CameraSystem:
     def __init__(self, renderer):
         self.renderer = renderer
