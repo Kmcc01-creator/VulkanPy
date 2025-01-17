@@ -1,4 +1,5 @@
 import vulkan as vk
+from src.vertex import Vertex
 
 class ResourceManager:
     def __init__(self, renderer):
@@ -104,7 +105,7 @@ class ResourceManager:
 
         self.renderer.copy_buffer(staging_buffer, vertex_buffer, buffer_size)
 
-        self.destroy_buffer(staging_buffer)
         self.free_memory(staging_buffer_memory)
+        self.destroy_buffer(self.device, staging_buffer, None) # Correctly destroy staging buffer
 
         return vertex_buffer, vertex_buffer_memory, len(vertices)
