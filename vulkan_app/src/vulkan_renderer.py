@@ -72,6 +72,13 @@ class VulkanRenderer:
         self.image_available_semaphores, self.render_finished_semaphores, self.in_flight_fences = create_vk_sync_objects(self.device, len(self.framebuffers))
 
     def recreate_swapchain(self):
+        width = int(glfw.get_framebuffer_size(self.window)[0])
+        height = int(glfw.get_framebuffer_size(self.window)[1])
+        while width == 0 or height == 0: # Handle window minimization
+            width = int(glfw.get_framebuffer_size(self.window)[0])
+            height = int(glfw.get_framebuffer_size(self.window)[1])
+            glfw.wait_events()
+
         vk.vkDeviceWaitIdle(self.device)
 
         # Destroy old swapchain and related resources
@@ -80,12 +87,22 @@ class VulkanRenderer:
         vk.vkDestroySwapchainKHR(self.device, self.swapchain, None)
 
         # Recreate swapchain and related resources
+                extent=self.swapchain_extent,
+            ),
+            clearValueCount=1,
+            pClearValues=[vk.VkClearValue(color=vk.VkClearColorValue(float32=[0.0, 0.0, 0.0, 1.0]))],
+        )
+
+
         self.swapchain, self.swapchain_extent = self.create_swapchain()
         self.render_pass = self.create_render_pass()
         self.framebuffers = self.create_framebuffers()
+        self.pipeline, self.pipeline_layout = self.create_pipeline() # Recreate pipeline as well
+
 
         # Recreate command buffers
         self.create_command_buffers()
+
 
 
     def render(self):

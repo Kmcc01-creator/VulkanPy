@@ -61,7 +61,7 @@ def create_swapchain(instance, device, physical_device, surface, graphics_queue_
         minImageCount=image_count,
         imageFormat=surface_format.format,
         imageColorSpace=surface_format.colorSpace,
-        imageExtent=surface_capabilities.currentExtent,
+        imageExtent=vk.VkExtent2D(width=max(surface_capabilities.minImageExtent.width, min(surface_capabilities.maxImageExtent.width, surface_capabilities.currentExtent.width)), height=max(surface_capabilities.minImageExtent.height, min(surface_capabilities.maxImageExtent.height, surface_capabilities.currentExtent.height))),
         imageArrayLayers=1,
         imageUsage=vk.VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
         imageSharingMode=vk.VK_SHARING_MODE_EXCLUSIVE,  # For single queue family
