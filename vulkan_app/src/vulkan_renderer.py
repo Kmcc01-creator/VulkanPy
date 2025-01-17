@@ -255,6 +255,17 @@ class VulkanRenderer:
 
         vk.vkFreeCommandBuffers(self.device, self.command_pool, 1, [command_buffer])
 
+    def destroy_sync_objects(self):
+        for fence in self.in_flight_fences:
+            vk.vkWaitForFences(self.device, 1, [fence], vk.VK_TRUE, 1000000000) # Wait for fence before destroying it
+            vk.vkDestroyFence(self.device, fence, None)
+
+        for semaphore in self.image_available_semaphores:
+            vk.vkDestroySemaphore(self.device, semaphore, None)
+
+        for semaphore in self.render_finished_semaphores:
+            vk.vkDestroySemaphore(self.device, semaphore, None)
+
 
     def cleanup(self):
         vk.vkDeviceWaitIdle(self.device) # Wait for device to be idle before destroying resources
@@ -270,11 +281,14 @@ class VulkanRenderer:
 
         vk.vkDestroyCommandPool(self.device, self.command_pool, None)
 
-        vk.vkDestroyPipeline(self.device, self.pipeline, None)
-        vk.vkDestroyPipelineLayout(self.device, self.pipeline_layout, None)
-        vk.vkDestroyRenderPass(self.device, self.render_pass, None)
+        if self.pipeline is not None: # Check for None before destroying
+            vk.vkDestroyPipeline(self.device, self.pipeline, None)
+        if self.pipeline_layout is not None: # Check for None before destroying
+            vk.vkDestroyPipelineLayout(self.device, self.pipeline_layout, None)
+        if self.render_pass is not None: # Check for None before destroying
+            vk.vkDestroyRenderPass(self.device, self.render_pass, None)
 
-        for framebuffer in self.framebuffers:
+        for framebuffer in self.framebuffers or []: # Handle potential empty list
             vk.vkDestroyFramebuffer(self.device, framebuffer, None)
 
         vk.vkDestroySwapchainKHR(self.device, self.swapchain, None)
@@ -282,9 +296,7 @@ class VulkanRenderer:
         vk.vkDestroyDevice(self.device, None)
         vk.vkDestroyBuffer(self.device, self.vertex_buffer, None)
         vk.vkFreeMemory(self.device, self.vertex_buffer_memory, None)
-        vk.vkDestroyInstance(self.instance, None)
-        for fence in self.in_flight_fences:
-            vk.vkWaitForFences(self.device, 1, [fence], vk.VK_TRUE, 1000000000)
+        self.destroy_sync_objects()
             vk.vkDestroyFence(self.device, fence, None)
 
         for semaphore in self.image_available_semaphores:
@@ -306,8 +318,6 @@ class VulkanRenderer:
         vk.vkDestroySurfaceKHR(self.instance, self.surface, None)
         vk.vkDestroyDevice(self.device, None)
         vk.vkDestroyInstance(self.instance, None)
-        for fence in self.in_flight_fences:
-            vk.vkWaitForFences(self.device, 1, [fence], vk.VK_TRUE, 1000000000) # Wait for fence before destroying it
             vk.vkDestroyFence(self.device, fence, None)
 
         for semaphore in self.image_available_semaphores:
