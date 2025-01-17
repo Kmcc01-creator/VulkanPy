@@ -1,18 +1,22 @@
 import vulkan as vk
+import numpy as np
 
 class Vertex:
-    def __init__(self, pos, color):
+    def __init__(self, pos: np.ndarray, color: np.ndarray):
         self.pos = pos
         self.color = color
 
     @staticmethod
+    def sizeof():
+        return 2 * 4 * 3 # vec3 pos + vec3 color
+
+    @staticmethod
     def get_binding_descriptions():
         bindings = []
-        # Position and color binding description
         bindings.append(
             vk.VkVertexInputBindingDescription(
                 binding=0,
-                stride=2 * 4 * 3,  # Position (vec3) + Color (vec3) = 6 floats * 4 bytes/float
+                stride=Vertex.sizeof(),
                 inputRate=vk.VK_VERTEX_INPUT_RATE_VERTEX,
             )
         )
@@ -21,23 +25,20 @@ class Vertex:
     @staticmethod
     def get_attribute_descriptions():
         attributes = []
-        # Position attribute description
         attributes.append(
             vk.VkVertexInputAttributeDescription(
                 location=0,
                 binding=0,
-                format=vk.VK_FORMAT_R32G32B32_SFLOAT,  # vec3
+                format=vk.VK_FORMAT_R32G32B32_SFLOAT,
                 offset=0,
             )
         )
-        # Color attribute description
         attributes.append(
             vk.VkVertexInputAttributeDescription(
                 location=1,
                 binding=0,
-                format=vk.VK_FORMAT_R32G32B32_SFLOAT,  # vec3
-                offset=3 * 4,  # Offset after position (3 floats * 4 bytes/float)
+                format=vk.VK_FORMAT_R32G32B32_SFLOAT,
+                offset=4 * 3, # Offset of color after position
             )
         )
-
         return attributes
