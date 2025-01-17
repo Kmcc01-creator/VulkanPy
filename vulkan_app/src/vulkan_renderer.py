@@ -11,6 +11,7 @@ from src.mesh_renderer import MeshRenderer, MeshType
 import numpy as np
 import glfw
 import glm
+import ctypes
 
 logger = logging.getLogger(__name__)
 
