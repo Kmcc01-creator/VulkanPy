@@ -44,10 +44,8 @@ class VulkanRenderer:
         self.framebuffers = self.swapchain.framebuffers # Access framebuffers from Swapchain object
         self.create_command_pool() # New: create command pool
 
-        self.create_command_buffers() # New: create command buffers
-        self.create_sync_objects() # New: create synchronization objects
         self.current_frame = 0
-        self.render_system.init_rendering(self) # Initialize rendering resources
+        self.render_manager.init_rendering(self) # Initialize rendering resources
         self.graphics_queue = vk.vkGetDeviceQueue(self.device, self.graphics_queue_family_index, 0)
         self.present_queue = vk.vkGetDeviceQueue(self.device, self.graphics_queue_family_index, 0) # Using graphics queue for present for now
 
@@ -64,15 +62,6 @@ class VulkanRenderer:
         from vulkan_engine.device import create_device as create_vk_device
         return create_vk_device(self.instance, self.enabled_layers)
 
-    def create_command_pool(self): # New function
-        from vulkan_engine.command_buffer import create_command_pool as create_vk_command_pool
-        self.command_pool = create_vk_command_pool(self.device, self.graphics_queue_family_index)
-
-    def create_command_buffers(self): # New function
-        from vulkan_engine.command_buffer import create_command_buffers as create_vk_command_buffers
-        self.command_buffers = create_vk_command_buffers(self.device, self.command_pool, len(self.framebuffers))
-
-    def create_sync_objects(self):
         from vulkan_engine.synchronization import create_sync_objects as create_vk_sync_objects
         self.image_available_semaphores, self.render_finished_semaphores, self.in_flight_fences = create_vk_sync_objects(self.device, len(self.swapchain.swapchain_images), self.resource_manager)
 
@@ -190,14 +179,6 @@ class VulkanRenderer:
         except vk.VkError as e:
             raise Exception(f"Failed to end recording command buffer: {e}")
 
-    def create_descriptor_pool(self):
-        from vulkan_engine.descriptors import create_descriptor_pool as create_vk_descriptor_pool
-        self.descriptor_pool = create_vk_descriptor_pool(self.device, self.descriptor_set_layout.layout) # Access layout attribute
-
-    def create_uniform_buffers(self):
-        from vulkan_engine.descriptors import create_uniform_buffers as create_vk_uniform_buffers
-        self.uniform_buffers = create_vk_uniform_buffers(self, len(self.swapchain_images))
-
         pool_sizes = []
         pool_sizes.append(vk.VkDescriptorPoolSize(type=vk.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, descriptorCount=1))
 
@@ -255,7 +236,6 @@ class VulkanRenderer:
         vk.vkFreeCommandBuffers(self.device, self.command_pool, 1, [command_buffer])
 
 
-    def end_single_time_commands(self, command_buffer): # This function is no longer needed
         vk.vkEndCommandBuffer(command_buffer)
 
         submit_info = vk.VkSubmitInfo(
@@ -268,7 +248,6 @@ class VulkanRenderer:
 
         vk.vkFreeCommandBuffers(self.device, self.command_pool, 1, [command_buffer])
 
-    def destroy_sync_objects(self):
         for fence in self.in_flight_fences:
             vk.vkWaitForFences(self.device, 1, [fence], vk.VK_TRUE, 1000000000) # Wait for fence before destroying it
             vk.vkDestroyFence(self.device, fence, None)
@@ -281,28 +260,7 @@ class VulkanRenderer:
 
 
     def cleanup(self):
-        vk.vkDeviceWaitIdle(self.device) # Wait for device to be idle before destroying resources
-
-        for fence in self.in_flight_fences:
-            vk.vkDestroyFence(self.device, fence, None)
-
-        for semaphore in self.image_available_semaphores:
-            vk.vkDestroySemaphore(self.device, semaphore, None)
-
-        for semaphore in self.render_finished_semaphores:
-            vk.vkDestroySemaphore(self.device, semaphore, None)
-
-        vk.vkDestroyCommandPool(self.device, self.command_pool, None)
-
-        if self.pipeline is not None: # Check for None before destroying
-            vk.vkDestroyPipeline(self.device, self.pipeline, None)
-        if self.pipeline_layout is not None: # Check for None before destroying
-            vk.vkDestroyPipelineLayout(self.device, self.pipeline_layout, None)
-        if self.render_pass is not None: # Check for None before destroying
-            vk.vkDestroyRenderPass(self.device, self.render_pass, None)
-
-
-        self.resource_manager.cleanup()
+        self.resource_manager.cleanup() # Cleanup resources
 
         if self.surface is not None:
             vk.vkDestroySurfaceKHR(self.instance, self.surface, None)

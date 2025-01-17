@@ -5,10 +5,10 @@ class RenderManager:
         self.vulkan_engine = vulkan_engine
         self.device = vulkan_engine.device
 
-    def init_rendering(self, renderer): # Initialize rendering resources
+    def init_rendering(self, renderer):
         self.create_command_pool()
-        self.create_command_buffers(renderer.framebuffers) # Pass framebuffers here
-        self.create_sync_objects(len(renderer.swapchain.swapchain_images)) # Pass swapchain image count
+        self.create_command_buffers(renderer.swapchain.framebuffers)
+        self.create_sync_objects(len(renderer.swapchain.swapchain_images))
 
     def create_command_pool(self):
         from vulkan_engine.command_buffer import create_command_pool as create_vk_command_pool
@@ -23,14 +23,3 @@ class RenderManager:
         from vulkan_engine.synchronization import create_sync_objects as create_vk_sync_objects
         self.image_available_semaphores, self.render_finished_semaphores, self.in_flight_fences = create_vk_sync_objects(self.device, swapchain_image_count, self.vulkan_engine.resource_manager)
 
-    def cleanup(self):
-        for fence in self.in_flight_fences:
-            vk.vkDestroyFence(self.device, fence, None)
-
-        for semaphore in self.image_available_semaphores:
-            vk.vkDestroySemaphore(self.device, semaphore, None)
-
-        for semaphore in self.render_finished_semaphores:
-            vk.vkDestroySemaphore(self.device, semaphore, None)
-
-        vk.vkDestroyCommandPool(self.device, self.command_pool, None)

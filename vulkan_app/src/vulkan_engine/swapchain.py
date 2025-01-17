@@ -267,5 +267,3 @@ class Swapchain:
 
         self.renderer.create_command_buffers()
 
-    def cleanup(self):
-        pass # Resources are now managed by ResourceManager

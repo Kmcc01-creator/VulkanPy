@@ -44,9 +44,3 @@ class VulkanEngine:
     def cleanup(self):
         self.resource_manager.cleanup()
 
-        if self.surface is not None:
-            vk.vkDestroySurfaceKHR(self.instance, self.surface, None)
-        if self.device is not None:
-            vk.vkDestroyDevice(self.device, None)
-        if self.instance is not None:
-            vk.vkDestroyInstance(self.instance, None)
