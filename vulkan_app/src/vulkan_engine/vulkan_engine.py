@@ -32,9 +32,10 @@ class VulkanEngine:
             self.resource_manager = ResourceManager(self) # Initialize ResourceManager first
             self.instance, self.enabled_layers = self.resource_manager.create_instance() # Create instance through ResourceManager
             self.device, self.physical_device, self.graphics_queue_family_index = self.resource_manager.create_device(self.instance, self.enabled_layers) # Create device through ResourceManager
-            self.surface = self.create_surface() # Surface creation remains here for now
+            self.surface = self.create_surface()
             self.setup_queues()
-            self.swapchain = Swapchain(self, self.resource_manager) # No changes here
+            self.swapchain = Swapchain(self, self.resource_manager)
+            self.resource_manager.descriptor_pool = self.resource_manager.create_descriptor_pool(len(self.swapchain.swapchain_images), self.descriptor_set_layout)
             self.create_descriptor_set_layout() # No changes here
             logger.info("VulkanEngine initialized successfully")
         except vk.VkError as e:

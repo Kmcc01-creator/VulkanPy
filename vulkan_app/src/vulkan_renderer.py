@@ -44,7 +44,11 @@ class VulkanRenderer:
             self.init_world()
             self.load_shaders()
             self.create_uniform_buffers()
-            self.create_descriptor_sets()
+            self.descriptor_sets = self.vulkan_engine.resource_manager.create_descriptor_sets(
+                self.vulkan_engine.resource_manager.descriptor_pool,
+                self.vulkan_engine.descriptor_set_layout,
+                self.camera_uniform_buffers, self.light_uniform_buffers
+            )
             logger.info("VulkanRenderer initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize VulkanRenderer: {str(e)}")

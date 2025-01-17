@@ -223,3 +223,77 @@ class ResourceManager:
 
         self.copy_buffer(staging_buffer.buffer, index_buffer.buffer, buffer_size)
         return index_buffer, staging_buffer.memory, len(indices)
+
+    def create_descriptor_pool(self, swapchain_image_count, descriptor_set_layout):
+        pool_sizes = [
+            vk.VkDescriptorPoolSize(
+                type=vk.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                descriptorCount=swapchain_image_count * 2,  # 2 for camera and light
+            )
+        ]
+
+        pool_create_info = vk.VkDescriptorPoolCreateInfo(
+            sType=vk.VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+            maxSets=swapchain_image_count,
+            poolSizeCount=len(pool_sizes),
+            pPoolSizes=pool_sizes,
+        )
+
+        try:
+            descriptor_pool = vk.vkCreateDescriptorPool(self.device, pool_create_info, None)
+            self.add_resource(descriptor_pool, "descriptor_pool")
+            return descriptor_pool
+        except vk.VkError as e:
+            logger.error(f"Failed to create descriptor pool: {e}")
+            raise
+
+    def create_descriptor_sets(self, descriptor_pool, descriptor_set_layout, uniform_buffers, light_uniform_buffers):
+        layouts = [descriptor_set_layout.layout] * len(uniform_buffers)
+        alloc_info = vk.VkDescriptorSetAllocateInfo(
+            sType=vk.VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+            descriptorPool=descriptor_pool,
+            descriptorSetCount=len(uniform_buffers),
+            pSetLayouts=layouts,
+        )
+        try:
+            descriptor_sets = vk.vkAllocateDescriptorSets(self.device, alloc_info)
+
+            for i, (uniform_buffer, light_uniform_buffer) in enumerate(zip(uniform_buffers, light_uniform_buffers)):
+                camera_buffer_info = vk.VkDescriptorBufferInfo(
+                    buffer=uniform_buffer.buffer,
+                    offset=0,
+                    range=uniform_buffer.size,
+                )
+                light_buffer_info = vk.VkDescriptorBufferInfo(
+                    buffer=light_uniform_buffer.buffer,
+                    offset=0,
+                    range=light_uniform_buffer.size,
+                )
+
+                write_descriptor_sets = [
+                    vk.VkWriteDescriptorSet(
+                        sType=vk.VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                        dstSet=descriptor_sets[i],
+                        dstBinding=0,
+                        dstArrayElement=0,
+                        descriptorCount=1,
+                        descriptorType=vk.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                        pBufferInfo=[camera_buffer_info],
+                    ),
+                    vk.VkWriteDescriptorSet(
+                        sType=vk.VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                        dstSet=descriptor_sets[i],
+                        dstBinding=1,
+                        dstArrayElement=0,
+                        descriptorCount=1,
+                        descriptorType=vk.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                        pBufferInfo=[light_buffer_info],
+                    ),
+                ]
+
+                vk.vkUpdateDescriptorSets(self.device, len(write_descriptor_sets), write_descriptor_sets, 0, None)
+
+            return descriptor_sets
+        except vk.VkError as e:
+            logger.error(f"Failed to create descriptor sets: {e}")
+            raise

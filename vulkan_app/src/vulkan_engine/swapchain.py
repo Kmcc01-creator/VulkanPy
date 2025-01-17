@@ -84,8 +84,7 @@ class Swapchain:
         self.create_pipeline() # The pipeline creation logic is now handled within this function
         self.create_framebuffers()
         self.create_uniform_buffers()
-        self.create_descriptor_pool()
-        self.create_descriptor_sets()
+        # Descriptor pool and sets are now created by the resource manager
 
     def create_swapchain(self): # Modified function to use resource_manager
         try:
