@@ -38,10 +38,12 @@ class VulkanRenderer:
         self.surface = glfw.create_window_surface(self.instance, window, None, None)
 
         # Swapchain creation (requires window surface)
-        self.swapchain, self.swapchain_extent = self.create_swapchain() # Getting swapchain extent
-        self.render_pass = self.create_render_pass()
-        self.pipeline, self.pipeline_layout = self.create_pipeline() # Getting pipeline and layout
-        self.framebuffers = self.create_framebuffers()
+        self.swapchain = Swapchain(self)
+        self.swapchain_extent = self.swapchain.extent # Access extent from Swapchain object
+        self.render_pass = self.swapchain.render_pass # Access render_pass from Swapchain object
+        self.pipeline = self.swapchain.pipeline # Access pipeline from Swapchain object
+        self.pipeline_layout = self.swapchain.pipeline_layout # Access pipeline_layout from Swapchain object
+        self.framebuffers = self.swapchain.framebuffers # Access framebuffers from Swapchain object
         self.create_command_pool() # New: create command pool
 
         self.create_command_buffers() # New: create command buffers
