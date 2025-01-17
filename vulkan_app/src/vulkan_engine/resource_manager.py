@@ -55,6 +55,7 @@ class ResourceManager:
         vk.vkDestroyCommandPool(self.device, command_pool, None)
 
     def create_buffer(self, size, usage, properties):
+        from src.vertex import Vertex # Import Vertex class
         buffer_create_info = vk.VkBufferCreateInfo(
             sType=vk.VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
             size=size,
