@@ -1,6 +1,6 @@
 import vulkan as vk
-from vulkan_engine.pipeline import create_pipeline
-from vulkan_engine.descriptors import create_uniform_buffers, create_descriptor_pool, create_descriptor_sets
+
+
 
 def create_render_pass(device, swapchain_image_format):
     color_attachment = vk.VkAttachmentDescription(
@@ -58,8 +58,7 @@ class Swapchain:
         self.physical_device = renderer.physical_device
         self.surface = renderer.surface
         self.graphics_queue_family_index = renderer.graphics_queue_family_index
-        self.graphics_queue_family_index = renderer.graphics_queue_family_index
-        self.present_queue_family_index = renderer.present_queue_family_index # Fixed: Use actual present queue
+        self.present_queue_family_index = renderer.present_queue_family_index
 
         self.swapchain = None
         self.swapchain_images = []
@@ -98,7 +97,10 @@ class Swapchain:
             minImageCount=image_count,
             imageFormat=surface_format.format,
             imageColorSpace=surface_format.colorSpace,
-            imageExtent=vk.VkExtent2D(width=max(surface_capabilities.minImageExtent.width, min(surface_capabilities.maxImageExtent.width, surface_capabilities.currentExtent.width)), height=max(surface_capabilities.minImageExtent.height, min(surface_capabilities.maxImageExtent.height, surface_capabilities.currentExtent.height))),
+            imageExtent=vk.VkExtent2D(
+                width=max(surface_capabilities.minImageExtent.width, min(surface_capabilities.maxImageExtent.width, surface_capabilities.currentExtent.width)),
+                height=max(surface_capabilities.minImageExtent.height, min(surface_capabilities.maxImageExtent.height, surface_capabilities.currentExtent.height))
+            ),
             imageArrayLayers=1,
             imageUsage=vk.VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
             imageSharingMode=vk.VK_SHARING_MODE_EXCLUSIVE,  # For single queue family
@@ -114,13 +116,15 @@ class Swapchain:
         if self.graphics_queue_family_index != self.present_queue_family_index:
             swapchain_create_info.imageSharingMode = vk.VK_SHARING_MODE_CONCURRENT
             swapchain_create_info.queueFamilyIndexCount = 2
-            swapchain_create_info.pQueueFamilyIndices = [self.graphics_queue_family_index, self.present_queue_family_index]
+            p_queue_family_indices = [self.graphics_queue_family_index, self.present_queue_family_index]
+            swapchain_create_info.pQueueFamilyIndices = p_queue_family_indices
 
         try:
             self.swapchain = vk.vkCreateSwapchainKHR(self.device, swapchain_create_info, None)
-            self.resource_manager.add_resource(self.swapchain, "swapchain", self.resource_manager.destroy_swapchain)
+            self.resource_manager.add_resource(self.swapchain, "swapchain", self.resource_manager.destroy_swapchain)  # noqa: E501
             self.extent = surface_capabilities.currentExtent
-            self.swapchain_images = vk.vkGetSwapchainImagesKHR(self.device, self.swapchain)
+            swapchain_images = vk.vkGetSwapchainImagesKHR(self.device, self.swapchain)  # noqa: E501
+            self.swapchain_images = swapchain_images
             self.create_image_views()
         except vk.VkError as e:
             raise Exception(f"Failed to create swapchain: {e}")
@@ -155,8 +159,9 @@ class Swapchain:
             self.image_views.append(image_view)
 
     def create_render_pass(self):
+        format = self.choose_surface_format().format
         color_attachment = vk.VkAttachmentDescription(
-            format=self.choose_surface_format().format, # Use chosen surface format
+            format=format,  # Use chosen surface format
             samples=vk.VK_SAMPLE_COUNT_1_BIT,
             loadOp=vk.VK_ATTACHMENT_LOAD_OP_CLEAR,
             storeOp=vk.VK_ATTACHMENT_STORE_OP_STORE,
@@ -192,23 +197,22 @@ class Swapchain:
             raise Exception(f"Failed to create render pass: {e}")
 
     def create_pipeline(self):
-        self.pipeline, self.pipeline_layout, self.descriptor_set_layout = create_pipeline(self.device, self.extent, self.render_pass, self.resource_manager)
-        self.resource_manager.add_resource(self.pipeline, "pipeline", self.resource_manager.destroy_pipeline)
-        self.resource_manager.add_resource(self.pipeline_layout, "pipeline_layout", self.resource_manager.destroy_pipeline_layout)
-        self.resource_manager.add_resource(self.descriptor_set_layout.layout, "descriptor_set_layout", self.resource_manager.destroy_descriptor_set_layout)
-
+        self.pipeline, self.pipeline_layout, self.descriptor_set_layout = create_pipeline(  # noqa: E501
+            self.device, self.extent, self.render_pass, self.resource_manager
+        )
+        self.resource_manager.add_resource(self.pipeline, "pipeline", self.resource_manager.destroy_pipeline)  # noqa: E501
+        self.resource_manager.add_resource(self.pipeline_layout, "pipeline_layout", self.resource_manager.destroy_pipeline_layout)  # noqa: E501
+        self.resource_manager.add_resource(self.descriptor_set_layout.layout, "descriptor_set_layout", self.resource_manager.destroy_descriptor_set_layout)  # noqa: E501
 
     def create_framebuffers(self):
-        swapchain_images = vk.vkGetSwapchainImagesKHR(self.device, self.swapchain)
-        self.framebuffers = [] # Initialize self.framebuffers
-
-        for image in swapchain_images:
+        format = vk.vkGetSwapchainImagesKHR(self.device, self.swapchain)[0].format  # noqa: E501
+        for image in self.swapchain_images:
             image_view_create_info = vk.VkImageViewCreateInfo(
                 sType=vk.VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
                 image=image,
                 viewType=vk.VK_IMAGE_VIEW_TYPE_2D,
-                format=vk.vkGetSwapchainImagesKHR(self.device, self.swapchain)[0].format, # Getting format from first image, assuming all are same.
-                components=vk.VkComponentMapping(), # Default component mapping
+                format=format,  # Getting format from first image
+                components=vk.VkComponentMapping(),
                 subresourceRange=vk.VkImageSubresourceRange(
                     aspectMask=vk.VK_IMAGE_ASPECT_COLOR_BIT,
                     baseMipLevel=0,
@@ -217,8 +221,7 @@ class Swapchain:
                     layerCount=1,
                 )
             )
-            image_view = vk.vkCreateImageView(self.device, image_view_create_info, None)
-
+            image_view = vk.vkCreateImageView(self.device, image_view_create_info, None)  # noqa: E501
             framebuffer_create_info = vk.VkFramebufferCreateInfo(
                 sType=vk.VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
                 renderPass=self.render_pass,
@@ -229,8 +232,8 @@ class Swapchain:
                 layers=1,
             )
 
-            framebuffer = vk.vkCreateFramebuffer(self.device, framebuffer_create_info, None)
-            self.resource_manager.add_resource(framebuffer, "framebuffer", self.resource_manager.destroy_framebuffer)
+            framebuffer = vk.vkCreateFramebuffer(self.device, framebuffer_create_info, None)  # noqa: E501
+            self.resource_manager.add_resource(framebuffer, "framebuffer", self.resource_manager.destroy_framebuffer)  # noqa: E501
             self.framebuffers.append(framebuffer)
 
     def create_uniform_buffers(self):
