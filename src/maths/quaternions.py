@@ -1,4 +1,6 @@
 import numpy as np
+from src.maths.matrices import Matrix4
+from src.maths.vectors import Vector3
 
 class Quaternion:
     def __init__(self, x: float = 0.0, y: float = 0.0, z: float = 0.0, w: float = 1.0):
@@ -60,4 +62,3 @@ class Quaternion:
             axis_normalized.z * sin_half_angle,
             cos_half_angle,
         )
-

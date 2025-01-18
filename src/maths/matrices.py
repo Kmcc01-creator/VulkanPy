@@ -1,4 +1,5 @@
 import numpy as np
+from src.maths.vectors import Vector3
 
 class Matrix4:
     def __init__(self, matrix: np.ndarray = None):
