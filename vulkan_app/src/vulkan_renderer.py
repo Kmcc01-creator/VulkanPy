@@ -15,20 +15,6 @@ import ctypes
 
 logger = logging.getLogger(__name__)
 
-class UniformBufferObject(ctypes.Structure):
-    _fields_ = [
-        ("model", glm.mat4),
-        ("view", glm.mat4),
-        ("proj", glm.mat4),
-    ]
-
-class LightUBO(ctypes.Structure):
-    _fields_ = [
-        ("lightPos", glm.vec3),
-        ("viewPos", glm.vec3),
-        ("lightColor", glm.vec3),
-    ]
-
 class VulkanRenderer:
     def __init__(self, window: Any) -> None:
         self.window = window
@@ -44,120 +30,48 @@ class VulkanRenderer:
             self.init_world()
             self.load_shaders()
             self.create_uniform_buffers()
-            self.descriptor_sets = self.vulkan_engine.resource_manager.create_descriptor_sets(
-                self.vulkan_engine.resource_manager.descriptor_pool,
-                self.vulkan_engine.descriptor_set_layout,
-                self.camera_uniform_buffers, self.light_uniform_buffers
-            )
+            self.create_descriptor_sets()
             logger.info("VulkanRenderer initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize VulkanRenderer: {str(e)}")
             self.cleanup()
             raise
 
-
     def create_uniform_buffers(self):
-        camera_buffer_size = ctypes.sizeof(UniformBufferObject)
-        light_buffer_size = ctypes.sizeof(LightUBO)
-        material_buffer_size = 4 * 4 + 4 * 3  # vec3 albedo + float metallic + float roughness + float ao
-        self.camera_uniform_buffers = []
-        self.light_uniform_buffers = []
-        self.material_uniform_buffers = []
-        for _ in range(len(self.vulkan_engine.swapchain.swapchain_images)):
-            camera_buffer, camera_memory = self.vulkan_engine.resource_manager.create_buffer(
-                camera_buffer_size,
-                vk.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+        try:
+            self.camera_uniform_buffers, self.light_uniform_buffers, self.material_uniform_buffers = self.vulkan_engine.resource_manager.create_uniform_buffers(
+                len(self.vulkan_engine.swapchain.swapchain_images)
             )
-            self.camera_uniform_buffers.append((camera_buffer, camera_memory))
-
-            light_buffer, light_memory = self.vulkan_engine.resource_manager.create_buffer(
-                light_buffer_size,
-                vk.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-            )
-            self.light_uniform_buffers.append((light_buffer, light_memory))
-
-            material_buffer, material_memory = self.vulkan_engine.resource_manager.create_buffer(
-                material_buffer_size,
-                vk.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-            )
-            self.material_uniform_buffers.append((material_buffer, material_memory))
+        except Exception as e:
+            logger.error(f"Failed to create uniform buffers: {str(e)}")
+            raise
 
     def create_descriptor_sets(self):
-        descriptor_sets_layout = self.vulkan_engine.descriptor_set_layout
-        descriptor_pool = self.vulkan_engine.swapchain.descriptor_pool
-        
-        layouts = [descriptor_sets_layout.layout] * len(self.camera_uniform_buffers)
-        alloc_info = vk.VkDescriptorSetAllocateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-            descriptorPool=descriptor_pool,
-            descriptorSetCount=len(self.camera_uniform_buffers),
-            pSetLayouts=layouts,
-        )
-        self.descriptor_sets = vk.vkAllocateDescriptorSets(self.vulkan_engine.device, alloc_info)
-
-        for i, (camera_buffer, light_buffer) in enumerate(zip(self.camera_uniform_buffers, self.light_uniform_buffers)):
-            camera_buffer_info = vk.VkDescriptorBufferInfo(
-                buffer=camera_buffer[0],
-                offset=0,
-                range=ctypes.sizeof(UniformBufferObject),
+        try:
+            self.descriptor_sets = self.vulkan_engine.resource_manager.create_descriptor_sets(
+                self.vulkan_engine.resource_manager.descriptor_pool,
+                self.vulkan_engine.descriptor_set_layout,
+                self.camera_uniform_buffers,
+                self.light_uniform_buffers
             )
-            light_buffer_info = vk.VkDescriptorBufferInfo(
-                buffer=light_buffer[0],
-                offset=0,
-                range=ctypes.sizeof(LightUBO),
-            )
-
-            write_descriptor_sets = [
-                vk.VkWriteDescriptorSet(
-                    sType=vk.VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                    dstSet=self.descriptor_sets[i],
-                    dstBinding=0,
-                    dstArrayElement=0,
-                    descriptorCount=1,
-                    descriptorType=vk.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                    pBufferInfo=[camera_buffer_info],
-                ),
-                vk.VkWriteDescriptorSet(
-                    sType=vk.VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                    dstSet=self.descriptor_sets[i],
-                    dstBinding=1,
-                    dstArrayElement=0,
-                    descriptorCount=1,
-                    descriptorType=vk.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                    pBufferInfo=[light_buffer_info],
-                )
-            ]
-
-            vk.vkUpdateDescriptorSets(self.vulkan_engine.device, len(write_descriptor_sets), write_descriptor_sets, 0, None)
+        except Exception as e:
+            logger.error(f"Failed to create descriptor sets: {str(e)}")
+            raise
 
     def update_uniform_buffer(self, current_image):
-        camera_ubo = UniformBufferObject()
-        camera_ubo.model = glm.mat4()
-        camera_ubo.view = self.camera_component.get_view_matrix()
-        camera_ubo.proj = self.camera_component.get_projection_matrix()
-
-        camera_data = self.vulkan_engine.resource_manager.map_memory(self.camera_uniform_buffers[current_image][1])
-        ctypes.memmove(camera_data, ctypes.addressof(camera_ubo), ctypes.sizeof(camera_ubo))
-        self.vulkan_engine.resource_manager.unmap_memory(self.camera_uniform_buffers[current_image][1])
-
-        light_ubo = LightUBO()
-        light_ubo.lightPos = self.light.position
-        light_ubo.viewPos = self.camera_component.position
-        light_ubo.lightColor = self.light.color
-
-        light_data = self.vulkan_engine.resource_manager.map_memory(self.light_uniform_buffers[current_image][1])
-        ctypes.memmove(light_data, ctypes.addressof(light_ubo), ctypes.sizeof(light_ubo))
-        self.vulkan_engine.resource_manager.unmap_memory(self.light_uniform_buffers[current_image][1])
-
-        # Update material uniform buffer
-        for entity, (mesh, material) in self.world.get_components(Mesh, Material):
-            material_data = self.vulkan_engine.resource_manager.map_memory(self.material_uniform_buffers[current_image][1])
-            material_buffer = material.to_uniform_buffer()
-            ctypes.memmove(material_data, material_buffer.ctypes.data, material_buffer.nbytes)
-            self.vulkan_engine.resource_manager.unmap_memory(self.material_uniform_buffers[current_image][1])
+        try:
+            self.vulkan_engine.resource_manager.update_uniform_buffers(
+                current_image,
+                self.camera_component,
+                self.light,
+                self.world,
+                self.camera_uniform_buffers,
+                self.light_uniform_buffers,
+                self.material_uniform_buffers
+            )
+        except Exception as e:
+            logger.error(f"Failed to update uniform buffers: {str(e)}")
+            raise
 
     def load_shaders(self) -> None:
         try:
@@ -192,7 +106,8 @@ class VulkanRenderer:
 
     def create_light(self) -> None:
         light_entity = self.world.create_entity()
-        self.world.add_component(light_entity, Light(position=np.array([5.0, 5.0, 5.0]), color=np.array([1.0, 1.0, 1.0]), intensity=1.0))
+        self.light = Light(position=np.array([5.0, 5.0, 5.0]), color=np.array([1.0, 1.0, 1.0]), intensity=1.0)
+        self.world.add_component(light_entity, self.light)
         self.world.add_component(light_entity, Transform(position=np.array([5.0, 5.0, 5.0]), rotation=np.array([0.0, 0.0, 0.0]), scale=np.array([1.0, 1.0, 1.0])))
 
     def create_objects(self) -> None:

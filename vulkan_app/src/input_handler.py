@@ -27,9 +27,9 @@ class InputHandler:
     def process_keyboard_input(self, camera: Any) -> None:
         camera_speed = 0.01
         movement = vec3(0.0, 0.0, 0.0)
-        for key, direction in self.key_mappings.items():
-            if glfw.get_key(self.window, key) == glfw.PRESS:
-                movement += direction
+        pressed_keys = [key for key, direction in self.key_mappings.items() if glfw.get_key(self.window, key) == glfw.PRESS]
+        for key in pressed_keys:
+            movement += self.key_mappings[key]
         if movement.length() > 0:
             movement = movement.normalize() * camera_speed
             camera.position += movement

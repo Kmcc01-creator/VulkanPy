@@ -297,3 +297,64 @@ class ResourceManager:
         except vk.VkError as e:
             logger.error(f"Failed to create descriptor sets: {e}")
             raise
+
+    def create_uniform_buffers(self, num_buffers):
+        camera_uniform_buffers = []
+        light_uniform_buffers = []
+        material_uniform_buffers = []
+        try:
+            for _ in range(num_buffers):
+                camera_buffer = self.create_buffer(
+                    ctypes.sizeof(UniformBufferObject),
+                    vk.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                    vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+                )
+                camera_uniform_buffers.append(camera_buffer)
+
+                light_buffer = self.create_buffer(
+                    ctypes.sizeof(LightUBO),
+                    vk.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                    vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+                )
+                light_uniform_buffers.append(light_buffer)
+
+                material_buffer = self.create_buffer(
+                    4 * 4 + 4 * 3,  # vec3 albedo + float metallic + float roughness + float ao
+                    vk.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                    vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+                )
+                material_uniform_buffers.append(material_buffer)
+
+            return camera_uniform_buffers, light_uniform_buffers, material_uniform_buffers
+        except Exception as e:
+            logger.error(f"Failed to create uniform buffers: {e}")
+            raise
+
+    def update_uniform_buffers(self, current_image, camera_component, light, world, camera_uniform_buffers, light_uniform_buffers, material_uniform_buffers):
+        try:
+            camera_ubo = UniformBufferObject()
+            camera_ubo.model = glm.mat4()
+            camera_ubo.view = camera_component.get_view_matrix()
+            camera_ubo.proj = camera_component.get_projection_matrix()
+
+            camera_data = self.map_memory(camera_uniform_buffers[current_image].memory)
+            ctypes.memmove(camera_data, ctypes.addressof(camera_ubo), ctypes.sizeof(camera_ubo))
+            self.unmap_memory(camera_uniform_buffers[current_image].memory)
+
+            light_ubo = LightUBO()
+            light_ubo.lightPos = light.position
+            light_ubo.viewPos = camera_component.position
+            light_ubo.lightColor = light.color
+
+            light_data = self.map_memory(light_uniform_buffers[current_image].memory)
+            ctypes.memmove(light_data, ctypes.addressof(light_ubo), ctypes.sizeof(light_ubo))
+            self.unmap_memory(light_uniform_buffers[current_image].memory)
+
+            for entity, (mesh, material) in world.get_components(Mesh, Material):
+                material_data = self.map_memory(material_uniform_buffers[current_image].memory)
+                material_buffer = material.to_uniform_buffer()
+                ctypes.memmove(material_data, material_buffer.ctypes.data, material_buffer.nbytes)
+                self.unmap_memory(material_uniform_buffers[current_image].memory)
+        except Exception as e:
+            logger.error(f"Failed to update uniform buffers: {e}")
+            raise
