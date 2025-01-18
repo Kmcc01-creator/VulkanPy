@@ -1,12 +1,20 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 )
 
+type Message struct {
+	Text string `json:"text"`
+}
+
 func hello(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Hello, World!")
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	msg := Message{Text: "Hello from Go!"}
+	json.NewEncoder(w).Encode(msg)
 }
 
 func main() {
