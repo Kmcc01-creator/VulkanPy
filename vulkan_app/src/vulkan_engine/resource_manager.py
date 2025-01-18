@@ -11,26 +11,42 @@ from src.vulkan_engine.uniform_buffer_objects import UniformBufferObject, LightU
 logger = logging.getLogger(__name__)
 
 class ResourceManager:
-    def __init__(self, device, physical_device):
-        self.device = device
-        self.physical_device = physical_device
+    def __init__(self, vulkan_engine):
+        self.vulkan_engine = vulkan_engine
+        self.device = vulkan_engine.device
+        self.physical_device = vulkan_engine.physical_device
         self.resources = {}
-        self.memory_allocator = MemoryAllocator(device, physical_device)
+        self.memory_allocator = MemoryAllocator(self.device, self.physical_device)
+        self.command_pool = None
+        self.command_buffers = []
+        self.create_command_pool()
 
     def create_buffer(self, size, usage, memory_properties):
-        buffer = VulkanBuffer(self.device, size, usage, memory_properties, self.memory_allocator)
-        self.add_resource(buffer, "buffer")
-        return buffer
+        try:
+            buffer = VulkanBuffer(self.device, size, usage, memory_properties, self.memory_allocator)
+            self.add_resource(buffer, "buffer")
+            return buffer
+        except vk.VkError as e:
+            logger.error(f"Failed to create buffer: {str(e)}")
+            raise
 
     def create_image(self, width, height, format, usage, memory_properties):
-        image = VulkanImage(self.device, width, height, format, usage, memory_properties, self.memory_allocator)
-        self.add_resource(image, "image")
-        return image
+        try:
+            image = VulkanImage(self.device, width, height, format, usage, memory_properties, self.memory_allocator)
+            self.add_resource(image, "image")
+            return image
+        except vk.VkError as e:
+            logger.error(f"Failed to create image: {str(e)}")
+            raise
 
     def create_sampler(self, create_info):
-        sampler = vk.vkCreateSampler(self.device, create_info, None)
-        self.add_resource(sampler, "sampler")
-        return sampler
+        try:
+            sampler = vk.vkCreateSampler(self.device, create_info, None)
+            self.add_resource(sampler, "sampler")
+            return sampler
+        except vk.VkError as e:
+            logger.error(f"Failed to create sampler: {str(e)}")
+            raise
 
     def create_descriptor_set_layout(self, bindings):
         layout_info = vk.VkDescriptorSetLayoutCreateInfo(
@@ -38,9 +54,13 @@ class ResourceManager:
             bindingCount=len(bindings),
             pBindings=bindings,
         )
-        layout = vk.vkCreateDescriptorSetLayout(self.device, layout_info, None)
-        self.add_resource(layout, "descriptor_set_layout")
-        return layout
+        try:
+            layout = vk.vkCreateDescriptorSetLayout(self.device, layout_info, None)
+            self.add_resource(layout, "descriptor_set_layout")
+            return layout
+        except vk.VkError as e:
+            logger.error(f"Failed to create descriptor set layout: {str(e)}")
+            raise
 
     def create_descriptor_pool(self, pool_sizes, max_sets):
         pool_create_info = vk.VkDescriptorPoolCreateInfo(
@@ -49,9 +69,62 @@ class ResourceManager:
             poolSizeCount=len(pool_sizes),
             pPoolSizes=pool_sizes,
         )
-        descriptor_pool = vk.vkCreateDescriptorPool(self.device, pool_create_info, None)
-        self.add_resource(descriptor_pool, "descriptor_pool")
-        return descriptor_pool
+        try:
+            descriptor_pool = vk.vkCreateDescriptorPool(self.device, pool_create_info, None)
+            self.add_resource(descriptor_pool, "descriptor_pool")
+            return descriptor_pool
+        except vk.VkError as e:
+            logger.error(f"Failed to create descriptor pool: {str(e)}")
+            raise
+
+    def create_command_pool(self):
+        pool_info = vk.VkCommandPoolCreateInfo(
+            sType=vk.VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+            queueFamilyIndex=self.vulkan_engine.graphics_queue_family_index,
+            flags=vk.VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
+        )
+        try:
+            self.command_pool = vk.vkCreateCommandPool(self.device, pool_info, None)
+            logger.info("Command pool created successfully")
+        except vk.VkError as e:
+            logger.error(f"Failed to create command pool: {str(e)}")
+            raise
+
+    def allocate_command_buffers(self, count):
+        alloc_info = vk.VkCommandBufferAllocateInfo(
+            sType=vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+            commandPool=self.command_pool,
+            level=vk.VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+            commandBufferCount=count
+        )
+        try:
+            command_buffers = vk.vkAllocateCommandBuffers(self.device, alloc_info)
+            self.command_buffers.extend(command_buffers)
+            logger.info(f"{count} command buffers allocated successfully")
+            return command_buffers
+        except vk.VkError as e:
+            logger.error(f"Failed to allocate command buffers: {str(e)}")
+            raise
+
+    def begin_single_time_commands(self):
+        command_buffer = self.allocate_command_buffers(1)[0]
+        begin_info = vk.VkCommandBufferBeginInfo(
+            sType=vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+            flags=vk.VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
+        )
+        vk.vkBeginCommandBuffer(command_buffer, begin_info)
+        return command_buffer
+
+    def end_single_time_commands(self, command_buffer):
+        vk.vkEndCommandBuffer(command_buffer)
+        submit_info = vk.VkSubmitInfo(
+            sType=vk.VK_STRUCTURE_TYPE_SUBMIT_INFO,
+            commandBufferCount=1,
+            pCommandBuffers=[command_buffer]
+        )
+        vk.vkQueueSubmit(self.vulkan_engine.graphics_queue, 1, [submit_info], vk.VK_NULL_HANDLE)
+        vk.vkQueueWaitIdle(self.vulkan_engine.graphics_queue)
+        vk.vkFreeCommandBuffers(self.device, self.command_pool, 1, [command_buffer])
 
     def create_descriptor_set_layout(self, bindings):
         layout_info = vk.VkDescriptorSetLayoutCreateInfo(
