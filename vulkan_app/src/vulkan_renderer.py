@@ -1,5 +1,5 @@
 import logging
-from typing import Any
+from typing import Any, List
 from vulkan_engine.vulkan_engine import VulkanEngine
 from vulkan_renderer.render_manager import RenderManager
 from src.ecs.world import World
@@ -14,6 +14,15 @@ logger = logging.getLogger(__name__)
 
 class VulkanRenderer:
     def __init__(self, window: Any) -> None:
+        """
+        Initialize the VulkanRenderer.
+
+        Args:
+            window (Any): The GLFW window object.
+
+        Raises:
+            RuntimeError: If initialization fails.
+        """
         self.window = window
         logger.info("Initializing VulkanRenderer")
         try:
@@ -31,7 +40,7 @@ class VulkanRenderer:
         except Exception as e:
             logger.error(f"Failed to initialize VulkanRenderer: {str(e)}")
             self.cleanup()
-            raise
+            raise RuntimeError(f"VulkanRenderer initialization failed: {str(e)}")
 
     def load_shaders(self) -> None:
         try:
