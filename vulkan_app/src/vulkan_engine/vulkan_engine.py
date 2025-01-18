@@ -290,7 +290,15 @@ class VulkanEngine:
         return None
 
     def recreate_swapchain(self):
-        self.swapchain.recreate_swapchain()
+        vk.vkDeviceWaitIdle(self.device)
+        self.swapchain.cleanup()
+        self.swapchain = Swapchain(self)
+        self.create_render_pass()
+        self.create_descriptor_set_layout()
+        self.create_pipeline_layout()
+        self.create_graphics_pipeline()
+        self.create_compute_pipeline()
+        self.render_manager.recreate_command_buffers()
 
     def create_descriptor_set_layout(self):
         bindings = [
@@ -299,10 +307,15 @@ class VulkanEngine:
                 descriptorType=vk.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                 descriptorCount=1,
                 stageFlags=vk.VK_SHADER_STAGE_VERTEX_BIT,
+            ),
+            vk.VkDescriptorSetLayoutBinding(
+                binding=1,
+                descriptorType=vk.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                descriptorCount=1,
+                stageFlags=vk.VK_SHADER_STAGE_FRAGMENT_BIT,
             )
         ]
-        self.descriptor_set_layout = DescriptorSetLayout(self.device, bindings)
-        self.resource_manager.add_resource(self.descriptor_set_layout, "descriptor_set_layout")
+        self.descriptor_set_layout = self.resource_manager.create_descriptor_set_layout(bindings)
 
     def cleanup(self):
         logger.info("Cleaning up VulkanEngine resources")

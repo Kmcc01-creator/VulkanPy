@@ -1,5 +1,5 @@
 import logging
-from typing import Any, List
+from typing import Any
 from vulkan_engine.vulkan_engine import VulkanEngine
 from vulkan_renderer.render_manager import RenderManager
 from src.ecs.world import World
@@ -27,8 +27,7 @@ class VulkanRenderer:
         logger.info("Initializing VulkanRenderer")
         try:
             self.vulkan_engine = VulkanEngine(window)
-            self.resource_manager = self.vulkan_engine.resource_manager
-            self.shader_manager = ShaderManager(self.vulkan_engine.device, self.resource_manager)
+            self.shader_manager = ShaderManager(self.vulkan_engine.device, self.vulkan_engine.resource_manager)
             self.render_manager = RenderManager(self.vulkan_engine, self.shader_manager)
             self.world: World = World()
 
@@ -103,16 +102,18 @@ class VulkanRenderer:
 
     def render(self) -> None:
         try:
-            self.vulkan_engine.begin_frame()
-            self.render_manager.render(self.world)
-            self.vulkan_engine.end_frame()
+            image_index = self.vulkan_engine.begin_frame()
+            self.render_manager.render(self.world, image_index)
+            self.vulkan_engine.end_frame(image_index)
         except Exception as e:
             logger.error(f"Error during rendering: {str(e)}")
-            raise
+            self.vulkan_engine.handle_render_error()
 
     def framebuffer_resize_callback(self, window: Any, width: int, height: int) -> None:
         self.vulkan_engine.recreate_swapchain()
 
     def cleanup(self) -> None:
         logger.info("Cleaning up VulkanRenderer")
+        self.render_manager.cleanup()
+        self.shader_manager.cleanup()
         self.vulkan_engine.cleanup()
