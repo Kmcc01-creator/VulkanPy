@@ -1,16 +1,14 @@
 import logging
 from src.config import Config
 from src.application import Application
-
-def setup_logging():
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+from src.utils.logging_config import setup_logging
 
 def main():
     setup_logging()
     logger = logging.getLogger(__name__)
 
     try:
-        config = Config.load_from_file('config.yaml')
+        config = Config.load_from_file('vulkan_app/config.yaml')
         app = Application(config)
         app.run()
     except Exception as e:
