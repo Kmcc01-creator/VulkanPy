@@ -15,13 +15,14 @@ class VulkanEngine:
         self.window = window
         self.instance = None
         self.device = None
+        self.physical_device = None
         self.surface = None
-        self.resource_manager = None
         self.swapchain = None
-        self.descriptor_set_layout = None
-        self.pipeline = None
+        self.render_pass = None
+        self.pipeline_layout = None
         self.graphics_pipeline = None
         self.compute_pipeline = None
+        self.resource_manager = None
         logger.info("Initializing VulkanEngine")
         self.initialize()
 
@@ -33,16 +34,16 @@ class VulkanEngine:
 
     def initialize(self):
         try:
-            self.resource_manager = ResourceManager(self)
-            self.instance, self.enabled_layers = self.resource_manager.create_instance()
-            self.device, self.physical_device, self.graphics_queue_family_index = self.resource_manager.create_device(self.instance, self.enabled_layers)
-            self.surface = self.create_surface()
-            self.setup_queues()
-            self.swapchain = Swapchain(self, self.resource_manager)
-            self.create_descriptor_set_layout()
-            self.resource_manager.descriptor_pool = self.resource_manager.create_descriptor_pool(len(self.swapchain.swapchain_images), self.descriptor_set_layout)
-            self.pipeline = Pipeline(self.resource_manager)
-            self.create_pipelines()
+            self.create_instance()
+            self.create_surface()
+            self.select_physical_device()
+            self.create_logical_device()
+            self.create_swapchain()
+            self.create_render_pass()
+            self.create_pipeline_layout()
+            self.create_graphics_pipeline()
+            self.create_compute_pipeline()
+            self.resource_manager = ResourceManager(self.device, self.physical_device)
             logger.info("VulkanEngine initialized successfully")
         except vk.VkError as e:
             logger.error(f"Vulkan error during initialization: {str(e)}")
@@ -52,6 +53,33 @@ class VulkanEngine:
             logger.error(f"Failed to initialize VulkanEngine: {str(e)}")
             self.cleanup()
             raise
+
+    def create_instance(self):
+        # Implementation for creating Vulkan instance
+
+    def create_surface(self):
+        # Implementation for creating surface
+
+    def select_physical_device(self):
+        # Implementation for selecting physical device
+
+    def create_logical_device(self):
+        # Implementation for creating logical device
+
+    def create_swapchain(self):
+        # Implementation for creating swapchain
+
+    def create_render_pass(self):
+        # Implementation for creating render pass
+
+    def create_pipeline_layout(self):
+        # Implementation for creating pipeline layout
+
+    def create_graphics_pipeline(self):
+        # Implementation for creating graphics pipeline
+
+    def create_compute_pipeline(self):
+        # Implementation for creating compute pipeline
 
     def create_pipelines(self):
         try:

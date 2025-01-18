@@ -11,43 +11,47 @@ from src.vulkan_engine.uniform_buffer_objects import UniformBufferObject, LightU
 logger = logging.getLogger(__name__)
 
 class ResourceManager:
-    def __init__(self, renderer):
-        self.renderer = renderer
-        self.device = renderer.device
-        self.physical_device = renderer.physical_device
+    def __init__(self, device, physical_device):
+        self.device = device
+        self.physical_device = physical_device
         self.resources = {}
-        self.descriptor_set_layouts = {}
+        self.memory_allocator = MemoryAllocator(device, physical_device)
 
-    def create_instance(self): # New method to create Vulkan instance
-        from vulkan_engine.instance import create_instance as create_vk_instance
-        instance, enabled_layers = create_vk_instance()
-        self.add_resource(instance, "instance") # Add instance to managed resources
-        return instance, enabled_layers
+    def create_buffer(self, size, usage, memory_properties):
+        buffer = VulkanBuffer(self.device, size, usage, memory_properties, self.memory_allocator)
+        self.add_resource(buffer, "buffer")
+        return buffer
 
-    def create_pipeline_layout(self, create_info):
-        pipeline_layout = vk.vkCreatePipelineLayout(self.device, create_info, None)
-        self.add_resource(pipeline_layout, "pipeline_layout")
-        return pipeline_layout
+    def create_image(self, width, height, format, usage, memory_properties):
+        image = VulkanImage(self.device, width, height, format, usage, memory_properties, self.memory_allocator)
+        self.add_resource(image, "image")
+        return image
 
-    def create_graphics_pipeline(self, create_info):
-        try:
-            graphics_pipelines = vk.vkCreateGraphicsPipelines(self.device, None, 1, [create_info], None)
-            graphics_pipeline = graphics_pipelines[0]
-            self.add_resource(graphics_pipeline, "graphics_pipeline")
-            return graphics_pipeline
-        except vk.VkError as e:
-            logger.error(f"Failed to create graphics pipeline: {e}")
-            raise
+    def create_sampler(self, create_info):
+        sampler = vk.vkCreateSampler(self.device, create_info, None)
+        self.add_resource(sampler, "sampler")
+        return sampler
 
-    def create_compute_pipeline(self, create_info):
-        try:
-            compute_pipelines = vk.vkCreateComputePipelines(self.device, None, 1, [create_info], None)
-            compute_pipeline = compute_pipelines[0]
-            self.add_resource(compute_pipeline, "compute_pipeline")
-            return compute_pipeline
-        except vk.VkError as e:
-            logger.error(f"Failed to create compute pipeline: {e}")
-            raise
+    def create_descriptor_set_layout(self, bindings):
+        layout_info = vk.VkDescriptorSetLayoutCreateInfo(
+            sType=vk.VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+            bindingCount=len(bindings),
+            pBindings=bindings,
+        )
+        layout = vk.vkCreateDescriptorSetLayout(self.device, layout_info, None)
+        self.add_resource(layout, "descriptor_set_layout")
+        return layout
+
+    def create_descriptor_pool(self, pool_sizes, max_sets):
+        pool_create_info = vk.VkDescriptorPoolCreateInfo(
+            sType=vk.VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+            maxSets=max_sets,
+            poolSizeCount=len(pool_sizes),
+            pPoolSizes=pool_sizes,
+        )
+        descriptor_pool = vk.vkCreateDescriptorPool(self.device, pool_create_info, None)
+        self.add_resource(descriptor_pool, "descriptor_pool")
+        return descriptor_pool
 
     def create_descriptor_set_layout(self, bindings):
         layout_info = vk.VkDescriptorSetLayoutCreateInfo(
