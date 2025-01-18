@@ -7,13 +7,26 @@ class ApiService {
 
   ApiService({required this.baseUrl});
 
-  Future<Message> fetchMessage() async {
-    final response = await http.get(Uri.parse('$baseUrl/message'));
+  Future<List<Message>> fetchMessages() async {
+    final response = await http.get(Uri.parse('$baseUrl/messages'));
 
     if (response.statusCode == 200) {
-      return Message.fromJson(jsonDecode(response.body));
+      final List<dynamic> jsonList = jsonDecode(response.body);
+      return jsonList.map((json) => Message.fromJson(json)).toList();
     } else {
-      throw Exception('Failed to fetch message');
+      throw Exception('Failed to fetch messages');
+    }
+  }
+
+  Future<void> sendMessage(String text) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/messages'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'text': text}),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to send message');
     }
   }
 }
