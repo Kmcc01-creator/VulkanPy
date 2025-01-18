@@ -2,6 +2,14 @@
 ├── CHANGES.md
 ├── CHANGESUPDATE.md
 ├── DEPENDENCIES
+├── Flutter_App
+│   ├── pubspec.yaml
+│   └── server.go
+├── lib
+│   ├── api_service.dart
+│   ├── home_screen.dart
+│   ├── main.dart
+│   └── message.dart
 ├── LIGHTING.md
 ├── pdm.lock
 ├── PROJECTNOTES.md
@@ -12,6 +20,10 @@
 ├── REFACTOR.md
 ├── RESOURCES.md
 ├── SYSTEM.md
+├── terminal_utils
+│   ├── client.py
+│   ├── config.py
+│   └── server.py
 ├── TODO.todo
 ├── treedir.md
 └── vulkan_app
@@ -46,8 +58,12 @@
         │   ├── __init__.cpython-312.pyc
         │   └── vulkan_renderer.cpython-312.pyc
         ├── resource_manager
+        │   ├── buffer_manager.py
+        │   ├── image_types.py
         │   ├── memory_allocator.py
+        │   ├── memory_manager.py
         │   ├── resource_manager.py
+        │   ├── specialized_images.py
         │   └── vulkan_resources.py
         ├── shader_manager.py
         ├── utils
@@ -58,6 +74,14 @@
         │   ├── buffer.py
         │   ├── command_buffer.py
         │   ├── command_pool.py
+        │   ├── command_system
+        │   │   ├── command_buffer.py
+        │   │   ├── command_errors.py
+        │   │   ├── command_memory.py
+        │   │   ├── command_pool.py
+        │   │   ├── command_types.py
+        │   │   ├── command_validation.py
+        │   │   └── __init__.py
         │   ├── descriptors.py
         │   ├── device.py
         │   ├── __init__.py
@@ -70,9 +94,15 @@
         │   ├── vulkan_engine.py
         │   └── vulkan_instance.py
         ├── vulkan_renderer
+        │   ├── render_graph.py
         │   ├── render_manager.py
+        │   ├── render_pass.py
+        │   ├── render_state_builder.py
+        │   ├── render_state.py
+        │   ├── render_target_factory.py
+        │   ├── render_target.py
         │   └── vulkan_renderer.py
         ├── vulkan_renderer.py
         └── window_manager.py
 
-11 directories, 65 files
+15 directories, 91 files
