@@ -1,4 +1,3 @@
-import vulkan as vk
 import logging
 from typing import Any
 from vulkan_engine.vulkan_engine import VulkanEngine
@@ -10,8 +9,6 @@ from src.shader_manager import ShaderManager
 from src.mesh_renderer import MeshRenderer, MeshType
 import numpy as np
 import glfw
-import glm
-import ctypes
 
 logger = logging.getLogger(__name__)
 
@@ -29,48 +26,10 @@ class VulkanRenderer:
 
             self.init_world()
             self.load_shaders()
-            self.create_uniform_buffers()
-            self.create_descriptor_sets()
             logger.info("VulkanRenderer initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize VulkanRenderer: {str(e)}")
             self.cleanup()
-            raise
-
-    def create_uniform_buffers(self):
-        try:
-            self.camera_uniform_buffers, self.light_uniform_buffers, self.material_uniform_buffers = self.vulkan_engine.resource_manager.create_uniform_buffers(
-                len(self.vulkan_engine.swapchain.swapchain_images)
-            )
-        except Exception as e:
-            logger.error(f"Failed to create uniform buffers: {str(e)}")
-            raise
-
-    def create_descriptor_sets(self):
-        try:
-            self.descriptor_sets = self.vulkan_engine.resource_manager.create_descriptor_sets(
-                self.vulkan_engine.resource_manager.descriptor_pool,
-                self.vulkan_engine.descriptor_set_layout,
-                self.camera_uniform_buffers,
-                self.light_uniform_buffers
-            )
-        except Exception as e:
-            logger.error(f"Failed to create descriptor sets: {str(e)}")
-            raise
-
-    def update_uniform_buffer(self, current_image):
-        try:
-            self.vulkan_engine.resource_manager.update_uniform_buffers(
-                current_image,
-                self.camera_component,
-                self.light,
-                self.world,
-                self.camera_uniform_buffers,
-                self.light_uniform_buffers,
-                self.material_uniform_buffers
-            )
-        except Exception as e:
-            logger.error(f"Failed to update uniform buffers: {str(e)}")
             raise
 
     def load_shaders(self) -> None:
@@ -135,11 +94,8 @@ class VulkanRenderer:
     def render(self) -> None:
         try:
             self.render_manager.render(self.world)
-        except vk.VkError as e:
-            logger.error(f"Vulkan error during rendering: {str(e)}")
-            self.vulkan_engine.recreate_swapchain()
         except Exception as e:
-            logger.error(f"Unexpected error during rendering: {str(e)}")
+            logger.error(f"Error during rendering: {str(e)}")
             raise
 
     def framebuffer_resize_callback(self, window: Any, width: int, height: int) -> None:
