@@ -18,7 +18,8 @@ class VulkanRenderer:
         logger.info("Initializing VulkanRenderer")
         try:
             self.vulkan_engine = VulkanEngine(window)
-            self.shader_manager = ShaderManager(self.vulkan_engine.device)
+            self.resource_manager = self.vulkan_engine.resource_manager
+            self.shader_manager = ShaderManager(self.vulkan_engine.device, self.resource_manager)
             self.render_manager = RenderManager(self.vulkan_engine, self.shader_manager)
             self.world: World = World()
 
@@ -85,7 +86,7 @@ class VulkanRenderer:
         entity = self.world.create_entity()
         mesh_renderer = custom_mesh if custom_mesh else MeshRenderer(mesh_type)
         mesh = Mesh(mesh_renderer=mesh_renderer)
-        mesh.create_buffers(self.vulkan_engine.resource_manager)
+        mesh.create_buffers(self.resource_manager)
         self.world.add_component(entity, mesh)
         self.world.add_component(entity, Material(albedo=np.array([0.7, 0.7, 0.7]), metallic=0.5, roughness=0.5, ao=1.0))
         self.world.add_component(entity, Transform(position=position, rotation=np.array([0.0, 0.0, 0.0]), scale=np.array([1.0, 1.0, 1.0])))
@@ -93,7 +94,9 @@ class VulkanRenderer:
 
     def render(self) -> None:
         try:
+            self.vulkan_engine.begin_frame()
             self.render_manager.render(self.world)
+            self.vulkan_engine.end_frame()
         except Exception as e:
             logger.error(f"Error during rendering: {str(e)}")
             raise
@@ -103,9 +106,4 @@ class VulkanRenderer:
 
     def cleanup(self) -> None:
         logger.info("Cleaning up VulkanRenderer")
-        if hasattr(self, 'shader_manager'):
-            self.shader_manager.cleanup()
-        if hasattr(self, 'render_manager'):
-            self.render_manager.cleanup()
-        if hasattr(self, 'vulkan_engine'):
-            self.vulkan_engine.cleanup()
+        self.vulkan_engine.cleanup()
