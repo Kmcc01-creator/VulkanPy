@@ -30,40 +30,51 @@ class ResourceManager:
         return pipeline_layout
 
     def create_graphics_pipeline(self, create_info):
-        graphics_pipelines = vk.vkCreateGraphicsPipelines(self.device, None, 1, [create_info], None)
-        graphics_pipeline = graphics_pipelines[0]
-        self.add_resource(graphics_pipeline, "graphics_pipeline")
-        return graphics_pipeline
+        try:
+            graphics_pipelines = vk.vkCreateGraphicsPipelines(self.device, None, 1, [create_info], None)
+            graphics_pipeline = graphics_pipelines[0]
+            self.add_resource(graphics_pipeline, "graphics_pipeline")
+            return graphics_pipeline
+        except vk.VkError as e:
+            logger.error(f"Failed to create graphics pipeline: {e}")
+            raise
 
+    def create_compute_pipeline(self, create_info):
+        try:
+            compute_pipelines = vk.vkCreateComputePipelines(self.device, None, 1, [create_info], None)
+            compute_pipeline = compute_pipelines[0]
+            self.add_resource(compute_pipeline, "compute_pipeline")
+            return compute_pipeline
+        except vk.VkError as e:
+            logger.error(f"Failed to create compute pipeline: {e}")
+            raise
 
-    def create_descriptor_set_layout(self, bindings): # New method to create descriptor set layout
+    def create_descriptor_set_layout(self, bindings):
         layout_info = vk.VkDescriptorSetLayoutCreateInfo(
             sType=vk.VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
             bindingCount=len(bindings),
             pBindings=bindings,
         )
-        layout = vk.vkCreateDescriptorSetLayout(self.device, layout_info, None)
-        self.add_resource(layout, "descriptor_set_layout")
-        return layout # Return DescriptorSetLayout object
+        try:
+            layout = vk.vkCreateDescriptorSetLayout(self.device, layout_info, None)
+            self.add_resource(layout, "descriptor_set_layout")
+            return layout
+        except vk.VkError as e:
+            logger.error(f"Failed to create descriptor set layout: {e}")
+            raise
 
-    def create_device(self, instance, enabled_layers): # New method to create device
-        from vulkan_engine.device import create_device as create_vk_device
-        device, physical_device, graphics_queue_family_index = create_vk_device(instance, enabled_layers)
-        self.add_resource(device, "device")
-        return device, physical_device, graphics_queue_family_index
+    def create_shader_module(self, create_info):
+        try:
+            module = vk.vkCreateShaderModule(self.device, create_info, None)
+            self.add_resource(module, "shader_module")
+            return module
+        except vk.VkError as e:
+            logger.error(f"Failed to create shader module: {e}")
+            raise
 
-    def create_swapchain(self, vulkan_engine): # Modified method signature
-        from vulkan_engine.swapchain import create_swapchain as create_vk_swapchain
-        swapchain, extent, swapchain_images = create_vk_swapchain(vulkan_engine) # Call the new swapchain creation function
-        self.add_resource(swapchain, "swapchain")
-        return swapchain, extent, swapchain_images
-
-
-    def create_shader_module(self, code): # New method to create shader module
-        from vulkan_engine.shader_module import create_shader_module as create_vk_shader_module
-        module = create_vk_shader_module(self.device, code)
-        self.add_resource(module, "shader_module")
-        return module
+    def destroy_shader_module(self, shader_module):
+        vk.vkDestroyShaderModule(self.device, shader_module, None)
+        self.remove_resource(shader_module, "shader_module")
 
     def __enter__(self): # No changes here
         return self
