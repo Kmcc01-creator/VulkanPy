@@ -27,6 +27,7 @@ class VulkanEngine:
         self.present_queue = None
         self.graphics_queue_family_index = None
         self.present_queue_family_index = None
+        self.descriptor_set_layout = None
         logger.info("Initializing VulkanEngine")
         self.initialize()
 
@@ -46,6 +47,7 @@ class VulkanEngine:
             self.resource_manager = ResourceManager(self)
             self.swapchain = Swapchain(self)
             self.create_render_pass()
+            self.create_descriptor_set_layout()
             self.create_pipeline_layout()
             self.create_graphics_pipeline()
             self.create_compute_pipeline()

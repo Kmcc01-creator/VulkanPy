@@ -16,6 +16,7 @@ class ResourceManager:
         self.device = vulkan_engine.device
         self.physical_device = vulkan_engine.physical_device
         self.resources = {}
+        self.resource_cache = {}
         self.memory_allocator = MemoryAllocator(self.device, self.physical_device)
         self.command_pool = None
         self.command_buffers = []

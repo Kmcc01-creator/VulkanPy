@@ -3,7 +3,7 @@ import logging
 from typing import List, Tuple
 from vulkan_engine.command_buffer import create_command_pool, create_command_buffers
 from vulkan_engine.synchronization import create_sync_objects
-from src.ecs.components import Mesh, Transform
+from src.ecs.components import Mesh, Transform, Material
 from src.ecs.world import World
 from vulkan_engine.vulkan_engine import VulkanEngine
 from src.shader_manager import ShaderManager
@@ -21,6 +21,8 @@ class RenderManager:
         self.render_finished_semaphores: List[vk.VkSemaphore] = []
         self.in_flight_fences: List[vk.VkFence] = []
         self.current_frame = 0
+        self.uniform_buffers = []
+        self.descriptor_sets = []
         logger.info("Initializing RenderManager")
         try:
             self.init_rendering()
@@ -33,6 +35,8 @@ class RenderManager:
         self.create_command_pool()
         self.create_command_buffers()
         self.create_sync_objects()
+        self.create_uniform_buffers()
+        self.create_descriptor_sets()
 
     def create_command_pool(self) -> None:
         self.command_pool = create_command_pool(self.device, self.vulkan_engine.graphics_queue_family_index)
