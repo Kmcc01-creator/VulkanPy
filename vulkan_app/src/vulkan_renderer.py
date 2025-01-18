@@ -56,11 +56,13 @@ class VulkanRenderer:
             raise
 
 
-    def create_uniform_buffers(self): # No changes here yet
+    def create_uniform_buffers(self):
         camera_buffer_size = ctypes.sizeof(UniformBufferObject)
         light_buffer_size = ctypes.sizeof(LightUBO)
+        material_buffer_size = 4 * 4 + 4 * 3  # vec3 albedo + float metallic + float roughness + float ao
         self.camera_uniform_buffers = []
         self.light_uniform_buffers = []
+        self.material_uniform_buffers = []
         for _ in range(len(self.vulkan_engine.swapchain.swapchain_images)):
             camera_buffer, camera_memory = self.vulkan_engine.resource_manager.create_buffer(
                 camera_buffer_size,
@@ -75,6 +77,13 @@ class VulkanRenderer:
                 vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
             )
             self.light_uniform_buffers.append((light_buffer, light_memory))
+
+            material_buffer, material_memory = self.vulkan_engine.resource_manager.create_buffer(
+                material_buffer_size,
+                vk.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+            )
+            self.material_uniform_buffers.append((material_buffer, material_memory))
 
     def create_descriptor_sets(self):
         descriptor_sets_layout = self.vulkan_engine.descriptor_set_layout
@@ -142,6 +151,13 @@ class VulkanRenderer:
         light_data = self.vulkan_engine.resource_manager.map_memory(self.light_uniform_buffers[current_image][1])
         ctypes.memmove(light_data, ctypes.addressof(light_ubo), ctypes.sizeof(light_ubo))
         self.vulkan_engine.resource_manager.unmap_memory(self.light_uniform_buffers[current_image][1])
+
+        # Update material uniform buffer
+        for entity, (mesh, material) in self.world.get_components(Mesh, Material):
+            material_data = self.vulkan_engine.resource_manager.map_memory(self.material_uniform_buffers[current_image][1])
+            material_buffer = material.to_uniform_buffer()
+            ctypes.memmove(material_data, material_buffer.ctypes.data, material_buffer.nbytes)
+            self.vulkan_engine.resource_manager.unmap_memory(self.material_uniform_buffers[current_image][1])
 
     def load_shaders(self) -> None:
         try:

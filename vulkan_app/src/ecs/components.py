@@ -31,6 +31,14 @@ class Material:
     roughness: float
     ao: float  # Ambient Occlusion
 
+    def to_uniform_buffer(self):
+        return np.array([
+            *self.albedo,
+            self.metallic,
+            self.roughness,
+            self.ao
+        ], dtype=np.float32)
+
 @dataclass
 class Camera:
     position: np.ndarray = np.array([0.0, 0.0, -2.0])

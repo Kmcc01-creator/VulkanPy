@@ -6,11 +6,11 @@ import numpy as np
 class Vertex:
     pos: np.ndarray
     normal: np.ndarray
-    color: np.ndarray
+    tex_coord: np.ndarray
 
     @staticmethod
     def sizeof():
-        return 3 * 4 * 3  # vec3 pos + vec3 normal + vec3 color
+        return 3 * 4 + 3 * 4 + 2 * 4  # vec3 pos + vec3 normal + vec2 tex_coord
 
     @staticmethod
     def get_binding_descriptions():
@@ -40,8 +40,8 @@ class Vertex:
             vk.VkVertexInputAttributeDescription(
                 location=2,
                 binding=0,
-                format=vk.VK_FORMAT_R32G32B32_SFLOAT,
-                offset=4 * 6,  # Offset of color after normal
+                format=vk.VK_FORMAT_R32G32_SFLOAT,
+                offset=4 * 6,  # Offset of tex_coord after normal
             )
         ]
 
@@ -51,5 +51,5 @@ class Vertex:
         for vertex in vertices:
             buffer.extend(vertex.pos.astype(np.float32).tobytes())
             buffer.extend(vertex.normal.astype(np.float32).tobytes())
-            buffer.extend(vertex.color.astype(np.float32).tobytes())
+            buffer.extend(vertex.tex_coord.astype(np.float32).tobytes())
         return buffer
