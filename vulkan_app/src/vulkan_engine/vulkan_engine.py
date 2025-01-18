@@ -2,7 +2,7 @@ import vulkan as vk
 import glfw
 import logging
 from vulkan_engine.swapchain import Swapchain
-from vulkan_engine.resource_manager import ResourceManager
+from vulkan_app.src.resource_manager.resource_manager import ResourceManager
 from vulkan_engine.descriptors import DescriptorSetLayout
 from vulkan_engine.pipeline import Pipeline
 from utils.logging_config import setup_logging

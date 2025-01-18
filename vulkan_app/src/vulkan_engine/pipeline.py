@@ -1,212 +1,214 @@
 import vulkan as vk
 import logging
-from vulkan_engine.descriptors import DescriptorSetLayout
-from src.vertex import Vertex
+from typing import List, Tuple, Dict, Optional
+from dataclasses import dataclass
+from .vulkan_resources import VulkanResource
 
 logger = logging.getLogger(__name__)
 
-class Pipeline:
-    def __init__(self, resource_manager):
-        self.resource_manager = resource_manager
-        self.device = resource_manager.device
+@dataclass
+class PipelineConfigInfo:
+    viewport: vk.VkViewport
+    scissor: vk.VkRect2D
+    dynamic_states: List[int]
+    vertex_binding_descriptions: List[vk.VkVertexInputBindingDescription]
+    vertex_attribute_descriptions: List[vk.VkVertexInputAttributeDescription]
+    topology: int = vk.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST
+    enable_depth_test: bool = True
+    enable_depth_write: bool = True
+    depth_compare_op: int = vk.VK_COMPARE_OP_LESS
+    cull_mode: int = vk.VK_CULL_MODE_BACK_BIT
+    front_face: int = vk.VK_FRONT_FACE_COUNTER_CLOCKWISE
+    line_width: float = 1.0
 
-    def create_shader_module(self, shader_code):
-        create_info = vk.VkShaderModuleCreateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-            codeSize=len(shader_code),
-            pCode=shader_code,
+class Pipeline(VulkanResource):
+    def __init__(self, device: vk.VkDevice, cache_dir: str = "shader_cache/"):
+        super().__init__(device)
+        self.cache_dir = cache_dir
+        self.layout: Optional[vk.VkPipelineLayout] = None
+        self.validation_enabled = True  # Set based on engine configuration
+        
+    def create_graphics_pipeline(
+        self,
+        vert_shader_path: str,
+        frag_shader_path: str,
+        render_pass: vk.VkRenderPass,
+        config: PipelineConfigInfo,
+        descriptor_set_layouts: List[vk.VkDescriptorSetLayout] = None
+    ) -> None:
+        """Create a graphics pipeline with the specified configuration."""
+        try:
+            # Create shader modules
+            vert_shader_module = self._create_shader_module(vert_shader_path)
+            frag_shader_module = self._create_shader_module(frag_shader_path)
+
+            shader_stages = self._create_shader_stages(vert_shader_module, frag_shader_module)
+            vertex_input_info = self._create_vertex_input_info(config)
+            input_assembly_info = self._create_input_assembly_info(config)
+            viewport_info = self._create_viewport_info(config)
+            rasterization_info = self._create_rasterization_info(config)
+            multisample_info = self._create_multisample_info()
+            depth_stencil_info = self._create_depth_stencil_info(config)
+            color_blend_info = self._create_color_blend_info()
+            dynamic_state_info = self._create_dynamic_state_info(config)
+
+            # Create pipeline layout
+            self.layout = self._create_pipeline_layout(descriptor_set_layouts)
+
+            # Create the graphics pipeline
+            pipeline_info = vk.VkGraphicsPipelineCreateInfo(
+                sType=vk.VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+                stageCount=len(shader_stages),
+                pStages=shader_stages,
+                pVertexInputState=vertex_input_info,
+                pInputAssemblyState=input_assembly_info,
+                pViewportState=viewport_info,
+                pRasterizationState=rasterization_info,
+                pMultisampleState=multisample_info,
+                pDepthStencilState=depth_stencil_info,
+                pColorBlendState=color_blend_info,
+                pDynamicState=dynamic_state_info,
+                layout=self.layout,
+                renderPass=render_pass,
+                subpass=0
+            )
+
+            self.handle = vk.vkCreateGraphicsPipelines(
+                self.device, vk.VK_NULL_HANDLE, 1, [pipeline_info], None
+            )[0]
+            
+            logger.info("Graphics pipeline created successfully")
+
+            # Cleanup shader modules
+            vk.vkDestroyShaderModule(self.device, vert_shader_module, None)
+            vk.vkDestroyShaderModule(self.device, frag_shader_module, None)
+
+        except Exception as e:
+            logger.error(f"Failed to create graphics pipeline: {e}")
+            self.cleanup()
+            raise
+
+    def create_compute_pipeline(
+        self,
+        compute_shader_path: str,
+        descriptor_set_layouts: List[vk.VkDescriptorSetLayout] = None
+    ) -> None:
+        """Create a compute pipeline."""
+        try:
+            compute_shader_module = self._create_shader_module(compute_shader_path)
+            
+            shader_stage = vk.VkPipelineShaderStageCreateInfo(
+                sType=vk.VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+                stage=vk.VK_SHADER_STAGE_COMPUTE_BIT,
+                module=compute_shader_module,
+                pName="main"
+            )
+
+            self.layout = self._create_pipeline_layout(descriptor_set_layouts)
+
+            create_info = vk.VkComputePipelineCreateInfo(
+                sType=vk.VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+                stage=shader_stage,
+                layout=self.layout
+            )
+
+            self.handle = vk.vkCreateComputePipelines(
+                self.device, vk.VK_NULL_HANDLE, 1, [create_info], None
+            )[0]
+            
+            logger.info("Compute pipeline created successfully")
+
+            vk.vkDestroyShaderModule(self.device, compute_shader_module, None)
+
+        except Exception as e:
+            logger.error(f"Failed to create compute pipeline: {e}")
+            self.cleanup()
+            raise
+
+    def _create_shader_module(self, shader_path: str) -> vk.VkShaderModule:
+        """Create a shader module from a SPIR-V file."""
+        try:
+            with open(shader_path, 'rb') as f:
+                code = f.read()
+
+            create_info = vk.VkShaderModuleCreateInfo(
+                sType=vk.VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+                codeSize=len(code),
+                pCode=code
+            )
+
+            if self.validation_enabled:
+                logger.debug(f"Creating shader module from {shader_path}")
+
+            return vk.vkCreateShaderModule(self.device, create_info, None)
+
+        except Exception as e:
+            logger.error(f"Failed to create shader module from {shader_path}: {e}")
+            raise
+
+    def _create_pipeline_layout(
+        self,
+        descriptor_set_layouts: List[vk.VkDescriptorSetLayout] = None
+    ) -> vk.VkPipelineLayout:
+        """Create a pipeline layout."""
+        if descriptor_set_layouts is None:
+            descriptor_set_layouts = []
+
+        push_constant_range = vk.VkPushConstantRange(
+            stageFlags=vk.VK_SHADER_STAGE_VERTEX_BIT,
+            offset=0,
+            size=64  # Adjust size based on your push constant needs
         )
 
-        try:
-            return self.resource_manager.create_shader_module(create_info)
-        except vk.VkError as e:
-            logger.error(f"Failed to create shader module: {e}")
-            raise
+        create_info = vk.VkPipelineLayoutCreateInfo(
+            sType=vk.VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+            setLayoutCount=len(descriptor_set_layouts),
+            pSetLayouts=descriptor_set_layouts,
+            pushConstantRangeCount=1,
+            pPushConstantRanges=[push_constant_range]
+        )
 
-    def create_graphics_pipeline(self, swapchain_extent, render_pass):
-        try:
-            with open("vulkan_app/shaders/vert.spv", "rb") as f:
-                vert_shader_code = f.read()
-            with open("vulkan_app/shaders/frag.spv", "rb") as f:
-                frag_shader_code = f.read()
-        except IOError as e:
-            logger.error(f"Failed to read shader files: {e}")
-            raise
+        return vk.vkCreatePipelineLayout(self.device, create_info, None)
 
-        vert_shader_module = self.create_shader_module(vert_shader_code)
-        frag_shader_module = self.create_shader_module(frag_shader_code)
+    def cleanup(self) -> None:
+        """Clean up pipeline resources."""
+        if self.handle:
+            vk.vkDestroyPipeline(self.device, self.handle, None)
+            self.handle = None
+            
+        if self.layout:
+            vk.vkDestroyPipelineLayout(self.device, self.layout, None)
+            self.layout = None
 
-        shader_stages = [
+    def _create_shader_stages(
+        self,
+        vert_shader_module: vk.VkShaderModule,
+        frag_shader_module: vk.VkShaderModule
+    ) -> List[vk.VkPipelineShaderStageCreateInfo]:
+        """Create shader stage create infos."""
+        return [
             vk.VkPipelineShaderStageCreateInfo(
                 sType=vk.VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
                 stage=vk.VK_SHADER_STAGE_VERTEX_BIT,
                 module=vert_shader_module,
-                pName="main",
+                pName="main"
             ),
             vk.VkPipelineShaderStageCreateInfo(
                 sType=vk.VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
                 stage=vk.VK_SHADER_STAGE_FRAGMENT_BIT,
                 module=frag_shader_module,
-                pName="main",
-            ),
+                pName="main"
+            )
         ]
 
-        bindings = [
-            vk.VkDescriptorSetLayoutBinding(
-                binding=0,
-                descriptorType=vk.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                descriptorCount=1,
-                stageFlags=vk.VK_SHADER_STAGE_VERTEX_BIT,
-            ),
-            vk.VkDescriptorSetLayoutBinding(
-                binding=1,
-                descriptorType=vk.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                descriptorCount=1,
-                stageFlags=vk.VK_SHADER_STAGE_FRAGMENT_BIT,
-            ),
-        ]
-
-        descriptor_set_layout = self.resource_manager.create_descriptor_set_layout(bindings)
-
-        push_constant_range = vk.VkPushConstantRange(
-            stageFlags=vk.VK_SHADER_STAGE_VERTEX_BIT,
-            offset=0,
-            size=4 * 4 * 4,  # mat4
-        )
-
-        pipeline_layout_create_info = vk.VkPipelineLayoutCreateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-            setLayoutCount=1,
-            pSetLayouts=[descriptor_set_layout],
-            pushConstantRangeCount=1,
-            pPushConstantRanges=[push_constant_range],
-        )
-
-        pipeline_layout = self.resource_manager.create_pipeline_layout(pipeline_layout_create_info)
-
-        vertex_input_bindings = Vertex.get_binding_descriptions()
-        vertex_input_attributes = Vertex.get_attribute_descriptions()
-
-        vertex_input_state = vk.VkPipelineVertexInputStateCreateInfo(
+    def _create_vertex_input_info(self, config: PipelineConfigInfo) -> vk.VkPipelineVertexInputStateCreateInfo:
+        """Create vertex input state create info."""
+        return vk.VkPipelineVertexInputStateCreateInfo(
             sType=vk.VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-            vertexBindingDescriptionCount=len(vertex_input_bindings),
-            pVertexBindingDescriptions=vertex_input_bindings,
-            vertexAttributeDescriptionCount=len(vertex_input_attributes),
-            pVertexAttributeDescriptions=vertex_input_attributes,
+            vertexBindingDescriptionCount=len(config.vertex_binding_descriptions),
+            pVertexBindingDescriptions=config.vertex_binding_descriptions,
+            vertexAttributeDescriptionCount=len(config.vertex_attribute_descriptions),
+            pVertexAttributeDescriptions=config.vertex_attribute_descriptions
         )
 
-        input_assembly_state = vk.VkPipelineInputAssemblyStateCreateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-            topology=vk.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-            primitiveRestartEnable=vk.VK_FALSE,
-        )
-
-        viewport_state = vk.VkPipelineViewportStateCreateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-            viewportCount=1,
-            scissorCount=1,
-        )
-
-        rasterization_state = vk.VkPipelineRasterizationStateCreateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
-            depthClampEnable=vk.VK_FALSE,
-            rasterizerDiscardEnable=vk.VK_FALSE,
-            polygonMode=vk.VK_POLYGON_MODE_FILL,
-            cullMode=vk.VK_CULL_MODE_BACK_BIT,
-            frontFace=vk.VK_FRONT_FACE_COUNTER_CLOCKWISE,
-            depthBiasEnable=vk.VK_FALSE,
-            lineWidth=1.0,
-        )
-
-        multisample_state = vk.VkPipelineMultisampleStateCreateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-            rasterizationSamples=vk.VK_SAMPLE_COUNT_1_BIT,
-            sampleShadingEnable=vk.VK_FALSE,
-        )
-
-        color_blend_attachment_state = vk.VkPipelineColorBlendAttachmentState(
-            blendEnable=vk.VK_FALSE,
-            colorWriteMask=vk.VK_COLOR_COMPONENT_R_BIT | vk.VK_COLOR_COMPONENT_G_BIT | vk.VK_COLOR_COMPONENT_B_BIT | vk.VK_COLOR_COMPONENT_A_BIT,
-        )
-
-        color_blend_state = vk.VkPipelineColorBlendStateCreateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-            logicOpEnable=vk.VK_FALSE,
-            attachmentCount=1,
-            pAttachments=[color_blend_attachment_state],
-        )
-
-        dynamic_states = [vk.VK_DYNAMIC_STATE_VIEWPORT, vk.VK_DYNAMIC_STATE_SCISSOR]
-        dynamic_state = vk.VkPipelineDynamicStateCreateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
-            dynamicStateCount=len(dynamic_states),
-            pDynamicStates=dynamic_states,
-        )
-
-        pipeline_create_info = vk.VkGraphicsPipelineCreateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-            stageCount=len(shader_stages),
-            pStages=shader_stages,
-            pVertexInputState=vertex_input_state,
-            pInputAssemblyState=input_assembly_state,
-            pViewportState=viewport_state,
-            pRasterizationState=rasterization_state,
-            pMultisampleState=multisample_state,
-            pColorBlendState=color_blend_state,
-            pDynamicState=dynamic_state,
-            layout=pipeline_layout,
-            renderPass=render_pass,
-            subpass=0,
-        )
-
-        try:
-            graphics_pipeline = self.resource_manager.create_graphics_pipeline(pipeline_create_info)
-            logger.info("Graphics pipeline created successfully")
-            return graphics_pipeline, pipeline_layout, descriptor_set_layout
-        except vk.VkError as e:
-            logger.error(f"Failed to create graphics pipeline: {e}")
-            raise
-        finally:
-            self.resource_manager.destroy_shader_module(vert_shader_module)
-            self.resource_manager.destroy_shader_module(frag_shader_module)
-
-    def create_compute_pipeline(self, shader_path, descriptor_set_layout):
-        try:
-            with open(shader_path, "rb") as f:
-                compute_shader_code = f.read()
-        except IOError as e:
-            logger.error(f"Failed to read compute shader file: {e}")
-            raise
-
-        compute_shader_module = self.create_shader_module(compute_shader_code)
-
-        shader_stage = vk.VkPipelineShaderStageCreateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-            stage=vk.VK_SHADER_STAGE_COMPUTE_BIT,
-            module=compute_shader_module,
-            pName="main",
-        )
-
-        pipeline_layout_create_info = vk.VkPipelineLayoutCreateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-            setLayoutCount=1,
-            pSetLayouts=[descriptor_set_layout],
-        )
-
-        pipeline_layout = self.resource_manager.create_pipeline_layout(pipeline_layout_create_info)
-
-        pipeline_create_info = vk.VkComputePipelineCreateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-            stage=shader_stage,
-            layout=pipeline_layout,
-        )
-
-        try:
-            compute_pipeline = self.resource_manager.create_compute_pipeline(pipeline_create_info)
-            logger.info("Compute pipeline created successfully")
-            return compute_pipeline, pipeline_layout
-        except vk.VkError as e:
-            logger.error(f"Failed to create compute pipeline: {e}")
-            raise
-        finally:
-            self.resource_manager.destroy_shader_module(compute_shader_module)
+    # ... Additional helper methods for creating pipeline state info structures ...

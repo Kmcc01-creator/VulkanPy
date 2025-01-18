@@ -1,0 +1,8 @@
+Component management
+- shader_manager.py - Needs updating for validation support and error checking
+- uniform_buffer_objects.py - Needs updating for better memory alignment
+
+ECS Integration:
+
+- components.py - Needs updating for better resource lifecycle management
+- systems.py - Needs updating for better render system integration

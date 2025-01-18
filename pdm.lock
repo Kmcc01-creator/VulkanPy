@@ -5,7 +5,7 @@
 groups = ["default"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:a2740d11682769b10a7f4b7232845365d0578373b2c046eeda4b8d3a477313fa"
+content_hash = "sha256:65e6732779761979a0fbfa76be0304cfa055af4feb00f6eba8fcce585bb83174"
 
 [[metadata.targets]]
 requires_python = ">=3.12"
@@ -100,15 +100,6 @@ files = [
     {file = "glfw-2.8.0-py2.py27.py3.py30.py31.py32.py33.py34.py35.py36.py37.py38.p39.p310.p311.p312.p313-none-win32.whl", hash = "sha256:13a75d8d3e8d4bb24595f2354a392ccf7c54ddd20dacb88e1188b760f2a7714b"},
     {file = "glfw-2.8.0-py2.py27.py3.py30.py31.py32.py33.py34.py35.py36.py37.py38.p39.p310.p311.p312.p313-none-win_amd64.whl", hash = "sha256:1416f10d2c2748c39910e9d9e6a10a5473743c5a745518061e4051be4c5caaa1"},
     {file = "glfw-2.8.0.tar.gz", hash = "sha256:90e90d328b0b26fed6e1631d21801e2d8a7a0c5dcb480e733c177567ec9666f0"},
-]
-
-[[package]]
-name = "logging"
-version = "0.4.9.6"
-summary = "A logging module for Python"
-groups = ["default"]
-files = [
-    {file = "logging-0.4.9.6.tar.gz", hash = "sha256:26f6b50773f085042d301085bd1bf5d9f3735704db9f37c1ce6d8b85c38f2417"},
 ]
 
 [[package]]
